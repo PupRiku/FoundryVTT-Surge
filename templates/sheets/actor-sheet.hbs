@@ -62,7 +62,114 @@
         {{/each}}
       </div>
       <hr />
-      {{! Add a separator after attributes }}
+      {{! Skills Section }}
+      <h2>Skills</h2>
+      <div class='skills-list flexcol'>
+        {{! Container for the skills list }}
+        {{! Loop through skills defined in systemData.skills }}
+        {{#each systemData.skills as |skill key|}}
+          <div class='skill-item flexrow'>
+            {{! Row for each skill }}
+            <label
+              class='skill-label rollable'
+              data-skill='{{key}}'
+              title='Click to roll {{skill.label}}'
+            >{{skill.label}}</label>
+            <input
+              class='skill-value'
+              type='number'
+              name='system.skills.{{key}}.value'
+              value='{{skill.value}}'
+              data-dtype='Number'
+            />
+          </div>
+        {{/each}}
+      </div>
+      <hr />
+      {{! Add another separator after skills }}
+      {{! Passives Section }}
+      <h2>Passives</h2>
+      <div class='passives-list flexcol'>
+        {{! Hit Points }}
+        <div class='passive-item flexrow resource'>
+          {{! Added resource class for potential styling }}
+          <label>Hit Points (HP)</label>
+          <div class='resource-value flexrow'>
+            {{! Group value/max }}
+            <input
+              type='number'
+              name='system.passives.hp.value'
+              value='{{systemData.passives.hp.value}}'
+              placeholder='Current'
+              data-dtype='Number'
+            />
+            <span> / </span>
+            {{! Display Max HP - make input disabled as it's calculated }}
+            <input
+              type='number'
+              name='system.passives.hp.max'
+              value='{{systemData.passives.hp.max}}'
+              placeholder='Max'
+              data-dtype='Number'
+              disabled
+              title='Max HP = Starting Max + En-Counter'
+            />
+          </div>
+        </div>
+        {{! Actions per Turn }}
+        <div class='passive-item flexrow'>
+          <label>{{calculatedActions.label}}</label>
+          {{! Display calculated max actions - not editable }}
+          <span class='passive-value'>{{calculatedActions.max}}</span>
+        </div>
+        {{! En-Counter }}
+        <div class='passive-item flexrow'>
+          <label>{{systemData.passives.encounter.label}}</label>
+          <input
+            class='passive-value'
+            type='number'
+            name='system.passives.encounter.value'
+            value='{{systemData.passives.encounter.value}}'
+            data-dtype='Number'
+          />
+        </div>
+        {{! Recovery Points }}
+        <div class='passive-item flexrow'>
+          <label>{{systemData.passives.recovery.label}}</label>
+          {{! Display static value from species/template - not editable }}
+          <span
+            class='passive-value'
+          >{{systemData.passives.recovery.value}}</span>
+        </div>
+        {{! Menace }}
+        <div class='passive-item flexrow'>
+          <label>{{systemData.passives.menace.label}}</label>
+          {{! Display calculated total menace - not directly editable }}
+          <span
+            class='passive-value'
+            title='Base: {{systemData.passives.menace.base}} (Calculated total from base + equipment)'
+          >{{systemData.passives.menace.total}}</span>
+        </div>
+        {{! Movement Speed }}
+        <div class='passive-item flexrow'>
+          <label>{{systemData.passives.movement.label}}</label>
+          <input
+            class='passive-value'
+            type='number'
+            name='system.passives.movement.value'
+            value='{{systemData.passives.movement.value}}'
+            data-dtype='Number'
+          />
+          {{! Optional: Add a tooltip for special movement rules }}
+          <span
+            class='tooltip-marker'
+            title='{{systemData.passives.movement.special}}'
+          >?</span>
+        </div>
+      </div>
+      <hr />
+      {{! Separator after passives }}
+      <p>More content coming soon...</p>
 
     </div>
 
