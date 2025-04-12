@@ -39,34 +39,30 @@
 
     {{! Main Tab Content }}
     <div class='tab main' data-group='primary' data-tab='main'>
-      {{! Debugging Attributes Access }}
-      <hr />
-      <h2>Attribute Debugging:</h2>
-      {{#if systemData.attributes}}
-        <p style='color: green;'>SUCCESS: systemData.attributes object exists!</p>
-        <p>Attempting to log attributes object to console...</p>
-        {{log systemData.attributes}}
-        <p>Direct Access Test (STR Label):
-          {{systemData.attributes.str.label}}</p>
-      {{else}}
-        <p style='color: red;'>FAILURE: systemData.attributes object is MISSING
-          or falsey!</p>
-      {{/if}}
-      <hr />
-      {{! End Debugging }}
-
-      {{!-- <h2>Attributes</h2>
-      <div class='attributes-list'>
+      <h2>Attributes</h2>
+      <div class='attributes-list flexcol'>
+        {{! Using flexcol for vertical list }}
         {{! Loop through attributes defined in template.json }}
         {{#each systemData.attributes as |attribute key|}}
-          <p>Attribute Key: {{key}}</p>
-          {{! TEMPORARY DEBUG LINE }}
+          <div class='attribute-item flexrow'>
+            {{! Each attribute is a row }}
+            <label
+              class='attribute-label rollable'
+              data-attribute='{{key}}'
+              title='Click to roll {{attribute.label}}'
+            >{{attribute.label}}</label>
+            <input
+              class='attribute-value'
+              type='number'
+              name='system.attributes.{{key}}.value'
+              value='{{attribute.value}}'
+              data-dtype='Number'
+            />
+          </div>
         {{/each}}
       </div>
-
-      {{! We will add Skills, Passives, Combat Info etc. here later }}
       <hr />
-      <p>More content coming soon to the Main tab!</p> --}}
+      {{! Add a separator after attributes }}
 
     </div>
 
