@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0] - 2025-04-12
+
+### ✨ Features
+
+- Implemented character sheet display for Core Attributes (Strength, Dexterity, Intelligence, Charisma, Luck) on the 'Main' tab.
+- Attributes are shown with labels and editable input fields linked directly to actor data via Handlebars.
+- Added basic HTML structure for Header and Tab navigation (`Main`, `Biography`, `Inventory`).
+
 ## [0.1.1] - 2025-04-12
 
 ### 🐛 Bug Fixes
