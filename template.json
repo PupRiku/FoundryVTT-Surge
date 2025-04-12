@@ -66,12 +66,118 @@
     }
   },
   "Item": {
-    "types": ["item", "weapon", "armor", "species", "trait", "spell", "ammo"],
+    "types": [
+      "item",
+      "weapon",
+      "armor",
+      "ammunition",
+      "material",
+      "gear",
+      "medicine",
+      "tool",
+      "treasure",
+      "species",
+      "trait"
+    ],
     "item": {
       "description": "",
       "quantity": 1,
       "weight": 0,
-      "price": 0
+      "price": 0,
+      "crafting": {
+        "skill": "",
+        "dr": "",
+        "materials": ""
+      }
+    },
+    "weapon": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" },
+      "weaponType": "melee",
+      "skillUsed": "martial",
+      "damage": {
+        "formula": "1d6",
+        "type": "physical"
+      },
+      "range": "",
+      "menaceContribution": 0
+    },
+    "armor": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" },
+      "armorType": "light",
+      "damageReduction": {
+        "amount": 0,
+        "type": "physical",
+        "source": "melee"
+      },
+      "menaceContribution": 0
+    },
+    "ammunition": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" },
+      "ammoType": "arrow"
+    },
+    "material": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" }
+    },
+    "gear": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" }
+    },
+    "medicine": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" },
+      "effectDescription": ""
+    },
+    "tool": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" },
+      "light": {
+        "radius": 0,
+        "unit": "ft"
+      }
+    },
+    "treasure": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" }
+    },
+    "species": {
+      "description": "",
+      "attributeBonus": { "attribute": "int", "bonus": 1 },
+      "baseHp": 0,
+      "baseRecovery": 0,
+      "baseMovement": 0,
+      "baseMenace": 0
+    },
+    "trait": {
+      "description": "",
+      "skillBonus": { "skill": "culture", "bonus": 1 }
     }
   }
 }
