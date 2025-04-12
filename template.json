@@ -1,0 +1,77 @@
+{
+  "Actor": {
+    "types": ["character", "npc"],
+    "character": {
+      "details": {
+        "level": { "value": 1, "label": "Character Level" },
+        "species": "",
+        "chosen_trait": "",
+        "size": "Medium"
+      },
+      "biography": {
+        "appearance": "",
+        "involved": "",
+        "why_here": "",
+        "aspirations": "",
+        "origin": "",
+        "allies_enemies": "",
+        "notes": ""
+      },
+      "attributes": {
+        "str": { "value": 1, "label": "Strength" },
+        "dex": { "value": 1, "label": "Dexterity" },
+        "int": { "value": 1, "label": "Intelligence" },
+        "cha": { "value": 1, "label": "Charisma" },
+        "luk": { "value": 1, "label": "Luck" }
+      },
+      "skills": {
+        "clerical": { "value": 1, "label": "Clerical" },
+        "culture": { "value": 1, "label": "Culture" },
+        "guile": { "value": 1, "label": "Guile" },
+        "leathercraft": { "value": 1, "label": "Leathercraft" },
+        "marksmanship": { "value": 1, "label": "Marksmanship" },
+        "martial": { "value": 1, "label": "Martial Combat" },
+        "mechanical": { "value": 1, "label": "Mechanical" },
+        "medicine": { "value": 1, "label": "Medicine" },
+        "memory": { "value": 1, "label": "Memory" },
+        "metallurgy": { "value": 1, "label": "Metallurgy" },
+        "mystic": { "value": 1, "label": "Mystic" },
+        "survival": { "value": 1, "label": "Survival" },
+        "woodcraft": { "value": 1, "label": "Woodcraft" }
+      },
+      "passives": {
+        "hp": {
+          "value": 7,
+          "max": 7,
+          "base": 7
+        },
+        "encounter": { "value": 0, "label": "En-Counter" },
+        "recovery": { "value": 1, "label": "Recovery Points" },
+        "menace": {
+          "base": 0,
+          "label": "Menace"
+        },
+        "movement": {
+          "value": 10,
+          "special": "No penalty swimming submerged",
+          "label": "Movement Speed"
+        }
+      },
+      "currency": {
+        "gold": { "value": 100 }
+      }
+    },
+    "npc": {
+      "notes": ""
+    }
+  },
+  "Item": {
+    "types": ["item", "weapon", "armor", "species", "trait", "spell", "ammo"],
+    "item": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0
+    }
+  }
+}
