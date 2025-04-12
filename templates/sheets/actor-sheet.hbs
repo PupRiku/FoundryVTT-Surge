@@ -17,12 +17,16 @@
           value='{{actor.name}}'
           placeholder='Character Name'
         /></h1>
-      {{! Placeholder for other header info like Level, Species, etc. }}
       <div class='header-details'>
-        <span>Level: {{systemData.details.level.value}}</span>
         <span>Actions: {{calculatedActions.max}}</span>
-        {{! We'll add inputs/display for species, trait etc. later }}
+        {{! We can add Species/Trait here later if desired }}
       </div>
+    </div>
+    {{! Level Block - Moved to the end of the header }}
+    <div class='level-block'>
+      {{! Use the label defined in template.json }}
+      <label class='level-label'>{{systemData.details.level.label}}</label>
+      <span class='level-value'>{{systemData.details.level.value}}</span>
     </div>
   </header>
 

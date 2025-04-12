@@ -8,8 +8,8 @@
 
 /* Header Styling */
 .surge .sheet-header {
-  display: flex; /* Use flexbox */
-  align-items: flex-start; /* Align items to the top */
+  display: flex;
+  align-items: center; /* Try 'center' for vertical alignment */
   padding-bottom: 10px;
   border-bottom: 1px solid #ccc; /* Separator line */
   margin-bottom: 10px;
@@ -54,6 +54,52 @@
 }
 .surge .sheet-header .header-details span {
   font-weight: bold; /* Make values stand out slightly */
+}
+
+.surge.sheet.actor .sheet-header > .level-block {
+  /* <<< INCREASED SPECIFICITY */
+  flex: 0 0 90px; /* Use explicit basis, prevent grow/shrink */
+  margin-left: auto; /* Push to right */
+  /* width: 45px; */ /* Width property is likely redundant now */
+  height: 90px;
+  background-color: #f0f4f8;
+  border: 1px solid #c0c8d0;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  text-align: center;
+  box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.surge.sheet.actor .sheet-header > .level-block .level-label {
+  font-size: 0.85em;
+  font-weight: bold;
+  color: #334e68;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  flex: none;
+  text-align: center;
+  width: auto;
+  border: none;
+  background: none;
+}
+
+.surge.sheet.actor .sheet-header > .level-block .level-value {
+  font-size: 3em;
+  font-weight: bold;
+  color: #102a43;
+  line-height: 1.1;
+  margin-top: 2px;
+  flex: none;
+  text-align: center;
+  width: auto;
+  border: none;
+  background: none;
+  padding: 0;
 }
 
 /* Tab Navigation Styling */
