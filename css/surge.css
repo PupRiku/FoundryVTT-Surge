@@ -1,0 +1,221 @@
+/* File: systems/surge/css/surge.css */
+
+/* Apply basic styles to the entire sheet window */
+/* .surge.sheet.actor {
+  Example: You could set a default font-family here if desired
+  font-family: 'Signika', sans-serif;
+} */
+
+/* Header Styling */
+.surge .sheet-header {
+  display: flex; /* Use flexbox */
+  align-items: flex-start; /* Align items to the top */
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ccc; /* Separator line */
+  margin-bottom: 10px;
+  gap: 10px; /* Space between image and fields */
+}
+
+.surge .sheet-header .profile-img {
+  flex: 0 0 100px; /* Fixed size for image */
+  max-height: 100px; /* Ensure image doesn't exceed height */
+  border: 1px solid #999;
+  object-fit: cover;
+}
+
+.surge .sheet-header .header-fields {
+  flex: 1; /* Allow fields area to take remaining space */
+  display: flex;
+  flex-direction: column;
+}
+
+.surge .sheet-header .charname input {
+  width: 100%;
+  padding: 5px;
+  font-size: 1.8em; /* Larger character name */
+  font-weight: bold;
+  border: none; /* Make it look less like an input initially */
+  background: none;
+  margin: 0;
+}
+.surge .sheet-header .charname input:focus,
+.surge .sheet-header .charname input:hover {
+  border: 1px solid #ccc; /* Show border on focus/hover */
+  background: white;
+}
+
+.surge .sheet-header .header-details {
+  display: flex;
+  gap: 15px; /* Space between Level and Actions */
+  margin-top: 8px;
+  padding-left: 5px;
+  font-size: 0.9em;
+  color: #444;
+}
+.surge .sheet-header .header-details span {
+  font-weight: bold; /* Make values stand out slightly */
+}
+
+/* Tab Navigation Styling */
+.surge .sheet-tabs {
+  border-bottom: 1px solid #aaa; /* Slightly darker border for tabs */
+  margin: 0 0 10px 0; /* Adjust margins */
+  padding-left: 5px; /* Align with content padding */
+}
+.surge .sheet-tabs .item {
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  margin-right: 3px;
+  background: #eee; /* Light grey background for inactive tabs */
+  border-radius: 3px 3px 0 0; /* Rounded top corners */
+}
+.surge .sheet-tabs .item.active {
+  border-color: #aaa;
+  border-bottom: 1px solid white; /* Makes it look connected to content */
+  font-weight: bold;
+  position: relative;
+  bottom: -1px;
+  background: white; /* White background for active tab */
+  text-shadow: none;
+}
+
+/* Main Content Area Styling */
+.surge .sheet-body {
+  padding: 0 5px; /* Add slight horizontal padding */
+  overflow-y: auto; /* Allow body content to scroll if needed */
+}
+
+.surge .tab {
+  /* Base styles for tab content divs */
+  padding: 5px 0;
+}
+
+/* Styling for Lists (Attributes, Skills, Passives) */
+.surge .attributes-list,
+.surge .skills-list,
+.surge .passives-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px; /* Space between items in the list */
+  margin-bottom: 15px; /* Space below each list section */
+  padding: 0 5px; /* Indent lists slightly */
+}
+
+/* Styling for Items within Lists */
+.surge .attribute-item,
+.surge .skill-item,
+.surge .passive-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center; /* Vertically center label and value */
+  gap: 10px; /* Space between label and value */
+  padding: 2px 0;
+  border-bottom: 1px solid #eee; /* Faint line between items */
+}
+/* Remove border for last item */
+.surge .attribute-item:last-child,
+.surge .skill-item:last-child,
+.surge .passive-item:last-child {
+  border-bottom: none;
+}
+
+/* Styling Labels */
+.surge .attribute-label,
+.surge .skill-label,
+.surge .passive-item label {
+  flex: 1; /* Allow label to take up space */
+  /* Removed fixed width - let flexbox handle it or adjust later */
+  font-weight: bold;
+  text-align: left; /* Changed alignment */
+  margin: 0;
+}
+
+/* Style clickable labels */
+.surge label.rollable {
+  cursor: pointer;
+  color: #333;
+  text-decoration: none;
+  border-bottom: 1px dashed #777;
+  transition: all 0.2s ease; /* Smooth transition on hover */
+}
+.surge label.rollable:hover {
+  color: black;
+  border-bottom-color: black;
+  text-shadow: 0 0 3px #99f; /* Subtle blue glow */
+}
+
+/* Styling Input Fields and Values */
+.surge .attribute-value,
+.surge .skill-value,
+.surge .passive-item input,
+.surge .passive-item span.passive-value {
+  flex: 0 0 60px; /* Fixed width for value inputs/spans */
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 2px;
+  background-color: #f8f8f8; /* Slightly off-white background */
+}
+.surge .passive-item span.passive-value {
+  /* Display-only spans */
+  border: 1px solid transparent; /* No border */
+  background-color: transparent;
+  font-weight: bold;
+}
+
+/* Specific styling for HP resource display */
+/* .surge .passive-item.resource {
+  Target the HP row specifically if needed
+  Add specific styles if needed
+} */
+.surge .passive-item.resource .resource-value {
+  /* Container for value/max inputs */
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto; /* Don't let this group take up too much space */
+  margin-left: auto; /* Push it to the right */
+}
+.surge .passive-item.resource input {
+  flex: 0 0 60px; /* Maintain width */
+}
+.surge .passive-item.resource input[disabled] {
+  /* Style disabled Max HP */
+  background-color: #eee;
+  border-color: #ddd;
+  color: #777;
+}
+.surge .passive-item.resource span {
+  /* Style the '/' separator */
+  flex: 0 0 auto;
+}
+
+/* Style the tooltip marker */
+.surge .tooltip-marker {
+  cursor: help;
+  font-weight: bold;
+  color: #666;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8em;
+  margin-left: 5px;
+  background-color: #eee;
+}
+.surge .tooltip-marker:hover {
+  background-color: #ddd;
+}
+
+/* Headings within the sheet body */
+.surge .sheet-body h2 {
+  font-size: 1.2em;
+  border-bottom: 1px solid #aaa;
+  margin-bottom: 8px;
+  padding-bottom: 3px;
+  color: #333;
+}
