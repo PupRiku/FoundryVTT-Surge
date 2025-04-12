@@ -96,14 +96,22 @@
       "weight": 0,
       "price": 0,
       "crafting": { "skill": "", "dr": "", "materials": "" },
-      "weaponType": "melee",
-      "skillUsed": "martial",
+      "menaceContribution": 0,
+      "specialties": "",
+      "hands": 1,
+      "actionsAttack": 1,
+      "actionsReload": 0,
+      "range": "",
+      "appliedStatusEffects": [],
+      "appliedConditions": [],
       "damage": {
         "formula": "1d6",
-        "type": "physical"
+        "type": "Physical"
       },
-      "range": "",
-      "menaceContribution": 0
+      "era": "Medieval",
+      "weaponType": "melee",
+      "skillUsed": "martial",
+      "ammoType": ""
     },
     "armor": {
       "description": "",
@@ -169,15 +177,22 @@
     },
     "species": {
       "description": "",
-      "attributeBonus": { "attribute": "int", "bonus": 1 },
+      "attributeBonus": {
+        "attribute": "",
+        "value": 0
+      },
       "baseHp": 0,
       "baseRecovery": 0,
       "baseMovement": 0,
-      "baseMenace": 0
+      "baseMenace": 0,
+      "traitOptions": []
     },
     "trait": {
       "description": "",
-      "skillBonus": { "skill": "culture", "bonus": 1 }
+      "skillBonus": {
+        "skill": "",
+        "value": 0
+      }
     }
   }
 }
