@@ -2,7 +2,7 @@
   "id": "surge",
   "title": "SURGE!",
   "description": "A system for the SURGE! TTRPG, focusing on exciting dice mechanics and unique species.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "compatibility": {
     "minimum": "12",
     "verified": "12.331",
