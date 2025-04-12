@@ -11,12 +11,20 @@ export class SurgeCharacterSheet extends ActorSheet {
    * @override
    */
   static get defaultOptions() {
-    console.log('SURGE! | Getting SIMPLIFIED default options...'); // Add log for debugging
+    console.log('SURGE! | Getting REVISED default options (with tabs)...'); // Log message updated
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ['surge', 'sheet', 'actor', 'character'], // Keep basic classes
-      template: 'systems/surge/templates/sheets/actor-sheet.hbs', // Keep template path
-      // Temporarily remove width, height, tabs, resizable to test
-      resizable: true, // Let's keep resizable for now, usually safe
+      classes: ['surge', 'sheet', 'actor', 'character'],
+      template: 'systems/surge/templates/sheets/actor-sheet.hbs',
+      resizable: true,
+      // ADD TABS CONFIGURATION BACK:
+      tabs: [
+        {
+          navSelector: '.sheet-tabs',
+          contentSelector: '.sheet-body',
+          initial: 'main',
+        },
+      ],
+      // Still leave out width/height for now
     });
   }
 
