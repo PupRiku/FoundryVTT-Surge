@@ -1,5 +1,96 @@
 <form class='{{cssClass}}' autocomplete='off'>
-  <div class='sheet-content'>
-    <p>SURGE! Character Sheet Template - Placeholder Content</p>
-  </div>
+
+  {{! Sheet Header }}
+  <header class='sheet-header'>
+    <img
+      class='profile-img'
+      src='{{actor.img}}'
+      data-edit='img'
+      title='{{actor.name}}'
+      height='100'
+      width='100'
+    />
+    <div class='header-fields'>
+      <h1 class='charname'><input
+          name='name'
+          type='text'
+          value='{{actor.name}}'
+          placeholder='Character Name'
+        /></h1>
+      {{! Placeholder for other header info like Level, Species, etc. }}
+      <div class='header-details'>
+        <span>Level: {{systemData.details.level.value}}</span>
+        <span>Actions: {{calculatedActions.max}}</span>
+        {{! We'll add inputs/display for species, trait etc. later }}
+      </div>
+    </div>
+  </header>
+
+  {{! Sheet Body }}
+  <section class='sheet-body'>
+
+    {{! Placeholder for Tabs Navigation }}
+    <nav class='sheet-tabs tabs' data-group='primary'>
+      <a class='item active' data-tab='main'>Main</a>
+      <a class='item' data-tab='description'>Biography</a>
+      <a class='item' data-tab='items'>Inventory</a>
+      {{! Add more tabs as needed (e.g., Spells, Notes) }}
+    </nav>
+
+    {{! Main Tab Content }}
+    <div class='tab main' data-group='primary' data-tab='main'>
+      {{! Debugging Attributes Access }}
+      <hr />
+      <h2>Attribute Debugging:</h2>
+      {{#if systemData.attributes}}
+        <p style='color: green;'>SUCCESS: systemData.attributes object exists!</p>
+        <p>Attempting to log attributes object to console...</p>
+        {{log systemData.attributes}}
+        <p>Direct Access Test (STR Label):
+          {{systemData.attributes.str.label}}</p>
+      {{else}}
+        <p style='color: red;'>FAILURE: systemData.attributes object is MISSING
+          or falsey!</p>
+      {{/if}}
+      <hr />
+      {{! End Debugging }}
+
+      {{!-- <h2>Attributes</h2>
+      <div class='attributes-list'>
+        {{! Loop through attributes defined in template.json }}
+        {{#each systemData.attributes as |attribute key|}}
+          <p>Attribute Key: {{key}}</p>
+          {{! TEMPORARY DEBUG LINE }}
+        {{/each}}
+      </div>
+
+      {{! We will add Skills, Passives, Combat Info etc. here later }}
+      <hr />
+      <p>More content coming soon to the Main tab!</p> --}}
+
+    </div>
+
+    {{! Biography Tab Content }}
+    <div class='tab description' data-group='primary' data-tab='description'>
+      <h2>Biography</h2>
+      {{! Use Foundry's rich text editor helper }}
+      {{editor
+        systemData.biography.appearance
+        target='system.biography.appearance'
+        button=true
+        owner=owner
+        editable=editable
+      }}
+      {{! Add other biography fields (origin, allies, etc.) here later }}
+      <p>More biography fields coming soon...</p>
+    </div>
+
+    {{! Inventory Tab Content }}
+    <div class='tab items' data-group='primary' data-tab='items'>
+      <h2>Inventory</h2>
+      {{! We will add the item list here later }}
+      <p>Inventory display coming soon...</p>
+    </div>
+  </section>
+  {{! End Sheet Body }}
 </form>
