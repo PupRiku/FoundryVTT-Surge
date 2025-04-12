@@ -5,3 +5,6 @@
 - Initial system structure setup.
 - Created system.json manifest file.
 - Basic placeholder files for CSS and JS.
+- Initial Actor setup in template.json
+- Initial Item setup in template.json
+- Added weapons to template.json
