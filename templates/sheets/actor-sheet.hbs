@@ -2,33 +2,110 @@
 
   {{! Sheet Header }}
   <header class='sheet-header'>
-    <img
-      class='profile-img'
-      src='{{actor.img}}'
-      data-edit='img'
-      title='{{actor.name}}'
-      height='100'
-      width='100'
-    />
-    <div class='header-fields'>
-      <h1 class='charname'><input
-          name='name'
-          type='text'
-          value='{{actor.name}}'
-          placeholder='Character Name'
-        /></h1>
-      <div class='header-details'>
-        <span>Actions: {{calculatedActions.max}}</span>
-        {{! We can add Species/Trait here later if desired }}
+    {{! Overall header container }}
+
+    {{! Contains Image | Name | Level }}
+    <div class='header-top-row'>
+      {{! Profile Image }}
+      <img
+        class='profile-img'
+        src='{{actor.img}}'
+        data-edit='img'
+        title='{{actor.name}}'
+        height='100'
+        width='100'
+      />
+
+      {{! Name Block }}
+      <div class='charname-block'>
+        <h1 class='charname'><input
+            name='name'
+            type='text'
+            value='{{actor.name}}'
+            placeholder='Character Name'
+          /></h1>
+        {{! Old header-details div removed/empty }}
+      </div>
+
+      {{! Level Block }}
+      <div class='level-block'>
+        <label class='level-label'>{{systemData.details.level.label}}</label>
+        <span class='level-value'>{{systemData.details.level.value}}</span>
       </div>
     </div>
-    {{! Level Block - Moved to the end of the header }}
-    <div class='level-block'>
-      {{! Use the label defined in template.json }}
-      <label class='level-label'>{{systemData.details.level.label}}</label>
-      <span class='level-value'>{{systemData.details.level.value}}</span>
+    {{! End header-top-row }}
+
+    {{! Passives Grid (Placed below top row) }}
+    <div class='header-passives-grid'>
+      {{! Row 1 }}
+      <div class='passive-grid-item hp'>
+        <label title='Hit Points'>HP</label>
+        <div class='resource-value flexrow'>
+          <input
+            type='number'
+            name='system.passives.hp.value'
+            value='{{systemData.passives.hp.value}}'
+            placeholder='Current'
+            data-dtype='Number'
+          />
+          <span> / </span>
+          <input
+            type='number'
+            name='system.passives.hp.max'
+            value='{{systemData.passives.hp.max}}'
+            placeholder='Max'
+            data-dtype='Number'
+            disabled
+            title='Max HP = Starting Max + En-Counter'
+          />
+        </div>
+      </div>
+      <div class='passive-grid-item recovery'>
+        <label title='{{systemData.passives.recovery.label}}'>Recovery</label>
+        <span
+          class='passive-value'
+        >{{systemData.passives.recovery.value}}</span>
+      </div>
+      <div class='passive-grid-item movement'>
+        <label title='{{systemData.passives.movement.label}}'>Movement</label>
+        <input
+          class='passive-value'
+          type='number'
+          name='system.passives.movement.value'
+          value='{{systemData.passives.movement.value}}'
+          data-dtype='Number'
+        />
+      </div>
+
+      {{! Row 2 }}
+      <div class='passive-grid-item actions'>
+        <label title='{{calculatedActions.label}}'>Actions</label>
+        <span class='passive-value'>{{calculatedActions.max}}</span>
+      </div>
+      <div class='passive-grid-item encounter'>
+        <label
+          title='{{systemData.passives.encounter.label}}'
+        >En-Counter</label>
+        <input
+          class='passive-value'
+          type='number'
+          name='system.passives.encounter.value'
+          value='{{systemData.passives.encounter.value}}'
+          data-dtype='Number'
+        />
+      </div>
+      <div class='passive-grid-item menace'>
+        <label title='{{systemData.passives.menace.label}}'>Menace</label>
+        <span
+          class='passive-value'
+          title='Base: {{systemData.passives.menace.base}} (Total = Base + Equip)'
+        >{{systemData.passives.menace.total}}</span>
+      </div>
     </div>
+    {{! End header-passives-grid }}
+
   </header>
+  {{! End Sheet Header }}
 
   {{! Sheet Body }}
   <section class='sheet-body'>
@@ -91,88 +168,6 @@
       </div>
       <hr />
       {{! Add another separator after skills }}
-      {{! Passives Section }}
-      <h2>Passives</h2>
-      <div class='passives-list flexcol'>
-        {{! Hit Points }}
-        <div class='passive-item flexrow resource'>
-          {{! Added resource class for potential styling }}
-          <label>Hit Points (HP)</label>
-          <div class='resource-value flexrow'>
-            {{! Group value/max }}
-            <input
-              type='number'
-              name='system.passives.hp.value'
-              value='{{systemData.passives.hp.value}}'
-              placeholder='Current'
-              data-dtype='Number'
-            />
-            <span> / </span>
-            {{! Display Max HP - make input disabled as it's calculated }}
-            <input
-              type='number'
-              name='system.passives.hp.max'
-              value='{{systemData.passives.hp.max}}'
-              placeholder='Max'
-              data-dtype='Number'
-              disabled
-              title='Max HP = Starting Max + En-Counter'
-            />
-          </div>
-        </div>
-        {{! Actions per Turn }}
-        <div class='passive-item flexrow'>
-          <label>{{calculatedActions.label}}</label>
-          {{! Display calculated max actions - not editable }}
-          <span class='passive-value'>{{calculatedActions.max}}</span>
-        </div>
-        {{! En-Counter }}
-        <div class='passive-item flexrow'>
-          <label>{{systemData.passives.encounter.label}}</label>
-          <input
-            class='passive-value'
-            type='number'
-            name='system.passives.encounter.value'
-            value='{{systemData.passives.encounter.value}}'
-            data-dtype='Number'
-          />
-        </div>
-        {{! Recovery Points }}
-        <div class='passive-item flexrow'>
-          <label>{{systemData.passives.recovery.label}}</label>
-          {{! Display static value from species/template - not editable }}
-          <span
-            class='passive-value'
-          >{{systemData.passives.recovery.value}}</span>
-        </div>
-        {{! Menace }}
-        <div class='passive-item flexrow'>
-          <label>{{systemData.passives.menace.label}}</label>
-          {{! Display calculated total menace - not directly editable }}
-          <span
-            class='passive-value'
-            title='Base: {{systemData.passives.menace.base}} (Calculated total from base + equipment)'
-          >{{systemData.passives.menace.total}}</span>
-        </div>
-        {{! Movement Speed }}
-        <div class='passive-item flexrow'>
-          <label>{{systemData.passives.movement.label}}</label>
-          <input
-            class='passive-value'
-            type='number'
-            name='system.passives.movement.value'
-            value='{{systemData.passives.movement.value}}'
-            data-dtype='Number'
-          />
-          {{! Optional: Add a tooltip for special movement rules }}
-          <span
-            class='tooltip-marker'
-            title='{{systemData.passives.movement.special}}'
-          >?</span>
-        </div>
-      </div>
-      <hr />
-      {{! Separator after passives }}
       <p>More content coming soon...</p>
 
     </div>
