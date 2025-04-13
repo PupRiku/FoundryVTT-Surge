@@ -28,6 +28,95 @@ export class SurgeCharacterSheet extends ActorSheet {
     });
   }
 
+  // Lookup table for level to roll formula components
+  // Private class field syntax (#) might be usable depending on JS environment support,
+  // but using _convention is safer for broader compatibility.
+  _rollTable = {
+    1: { dice: 1, mod: 0 },
+    2: { dice: 1, mod: 1 },
+    3: { dice: 1, mod: 2 },
+    4: { dice: 1, mod: 3 },
+    5: { dice: 1, mod: 4 },
+    6: { dice: 1, mod: 5 },
+    7: { dice: 2, mod: 4 },
+    8: { dice: 2, mod: 5 },
+    9: { dice: 3, mod: 4 },
+    10: { dice: 3, mod: 5 },
+    11: { dice: 4, mod: 4 },
+    12: { dice: 4, mod: 5 },
+    13: { dice: 5, mod: 4 },
+    14: { dice: 5, mod: 5 },
+    15: { dice: 6, mod: 4 },
+    16: { dice: 6, mod: 5 },
+    17: { dice: 7, mod: 4 },
+    18: { dice: 7, mod: 5 },
+    19: { dice: 8, mod: 4 },
+    20: { dice: 8, mod: 5 },
+  };
+
+  /**
+   * Performs a SURGE! system roll based on a stat level and optional modifiers.
+   * Includes the 'x6' exploding dice rule.
+   * @param {number} level              The attribute or skill level (1-20).
+   * @param {string} label              The label for the roll (e.g., "Strength Check", "Guile Check").
+   * @param {number} [flatModifier=0]   Optional flat bonus/penalty added AFTER dice (e.g., STR level).
+   * @param {string} [modifierLabel=""] Optional label for the flat modifier (e.g., "STR Level").
+   * @returns {Promise<void>}           Sends the result to chat.
+   * @private
+   */
+  async _performRoll(level, label, flatModifier = 0, modifierLabel = '') {
+    level = Math.max(1, Math.min(20, level || 1)); // Ensure level is 1-20
+    const rollData = this._rollTable[level];
+
+    if (!rollData) {
+      console.error(`SURGE | Invalid level for roll table lookup: ${level}`);
+      ui.notifications.error(`Invalid level (${level}) for ${label}.`);
+      return;
+    }
+
+    // Base formula with SURGING dice (x6)
+    let formula = `${rollData.dice}d6x6`;
+    if (rollData.mod !== 0) {
+      formula += ` + ${rollData.mod}`;
+    }
+
+    // Prepare data object for the Roll class, including actor data
+    let rollDataObject = { ...this.actor.getRollData() }; // Include actor data like @attributes.str.value etc.
+
+    // Add flat modifier to formula and data object if present
+    if (flatModifier !== 0) {
+      const modSign = flatModifier > 0 ? '+' : ''; // Keep sign for negatives
+      // Create a simple key like 'strLevel' or 'mod' from the label for the data object
+      const modKey =
+        modifierLabel.toLowerCase().replace(/[^a-z0-9]/g, '') || 'modifier';
+      formula += ` <span class="math-inline">\{modSign\} @</span>{modKey}`; // Use @modKey in formula
+      rollDataObject[modKey] = flatModifier; // Add modifier value to data
+    }
+
+    console.log(
+      `SURGE | Rolling - Level: ${level}, Formula: ${formula}, Data:`,
+      rollDataObject,
+      `Label: ${label}`
+    );
+
+    // Create and evaluate the roll using Foundry's Roll class
+    const roll = new Roll(formula, rollDataObject);
+    try {
+      // Evaluate the roll asynchronously
+      await roll.evaluate();
+
+      // Send the result to the chat, using the provided label
+      await roll.toMessage({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        flavor: label, // e.g., "Strength Check"
+        // Add flags if needed later: flags: { surge: { level: level } }
+      });
+    } catch (err) {
+      console.error('SURGE | Roll evaluation failed:', err);
+      ui.notifications.error(`Failed to evaluate roll for ${label}.`);
+    }
+  }
+
   /**
    * Prepare the data context for Handlebars template rendering.
    * This method is called each time the sheet needs to be drawn.
@@ -97,18 +186,17 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     console.log('SURGE! | Activating Listeners');
 
-    // --- Add your event listeners here ---
+    // --- Roll Listeners ---
 
-    // Example: Listener for clicking an attribute name to roll it (adapt selector later)
-    // html.find('.attribute-rollable').click(this._onAttributeRoll.bind(this));
+    // Listener for Attribute Blocks (make sure block has .rollable)
+    html
+      .find('.attribute-block-label.rollable')
+      .click(this._onAttributeRoll.bind(this));
 
-    // Example: Listener for clicking a skill name to roll it (adapt selector later)
-    // html.find('.skill-rollable').click(this._onSkillRoll.bind(this));
+    // Listener for Skill Labels
+    html.find('.skill-label.rollable').click(this._onSkillRoll.bind(this));
 
-    // Example: Listener for clicking an attack button on a weapon (adapt selector later)
-    // html.find('.item-attack').click(this._onItemAttack.bind(this));
-
-    // Add more listeners for spells, interactions, editing items, etc.
+    // Add more listeners later (e.g., for items, weapons)
   }
 
   /**
@@ -123,18 +211,45 @@ export class SurgeCharacterSheet extends ActorSheet {
     const attribute = this.actor.system.attributes[attributeKey];
 
     if (attribute) {
-      console.log(`SURGE! | Rolling ${attribute.label}...`);
-      // TODO: Implement the actual roll logic using the attribute level (attribute.value)
-      // const rollFormula = ... getRollFormula(attribute.value) ...;
-      // const roll = await new Roll(rollFormula).roll({async: true});
-      // await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor: this.actor }), flavor: `${attribute.label} Check` });
-      ui.notifications.info(
-        `Attribute roll for ${attribute.label} clicked! (Logic not implemented)`
+      const label = `${attribute.label} Check`; // e.g., "Strength Check"
+      const level = attribute.value;
+      // Perform the basic roll using the attribute level
+      // We are NOT adding STR level or other bonuses here yet
+      await this._performRoll(level, label);
+    } else {
+      console.error(
+        `SURGE | Could not find attribute data for key: ${attributeKey}`
+      );
+      ui.notifications.warn(
+        `Attribute data not found for key: ${attributeKey}`
       );
     }
   }
 
-  // Define other event handler methods like _onSkillRoll, _onItemAttack, _onItemEdit, etc.
+  /**
+   * Handle clicking on a skill label to roll it.
+   * @param {Event} event The triggering click event
+   * @private
+   */
+  async _onSkillRoll(event) {
+    event.preventDefault();
+    const element = event.currentTarget;
+    // Get skill key from data-skill="clerical" (or similar)
+    const skillKey = element.dataset.skill;
+    const skill = this.actor.system.skills[skillKey];
+
+    if (skill) {
+      const label = `${skill.label} Check`; // e.g., "Culture Check"
+      const level = skill.value;
+      // Perform the basic roll using the skill level
+      await this._performRoll(level, label);
+    } else {
+      console.error(`SURGE | Could not find skill data for key: ${skillKey}`);
+      ui.notifications.warn(`Skill data not found for key: ${skillKey}`);
+    }
+  }
+
+  // Define other event handler methods like _onItemAttack, _onItemEdit, etc.
   // Remember to use async for functions that perform rolls or update the actor.
 } // End of SurgeCharacterSheet class
 

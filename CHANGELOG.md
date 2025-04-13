@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.1] - 2025-04-13
+
+### 🐛 Bug Fixes
+
+- Attribute roll is no longer triggered when clicking the input field; only the attribute label is rollable.
+- Updated dice evaluation in `_performRoll` to use `await roll.evaluate()` instead of the deprecated `{ async: true }` option, resolving console warnings.
+
+### 🔧 Maintenance
+
+- Adjusted JavaScript listener target for attribute rolls in `activateListeners`.
+
 ## [0.2.0] - 2025-04-12
 
 ### ✨ Features

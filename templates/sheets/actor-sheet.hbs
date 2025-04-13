@@ -127,12 +127,12 @@
           <h2>Attributes</h2>
           <div class='attributes-block-list'>
             {{#each systemData.attributes as |attribute key|}}
-              <div
-                class='attribute-block rollable'
-                data-attribute='{{key}}'
-                title='Click to roll {{attribute.label}}'
-              >
-                <label class='attribute-block-label'>{{attribute.label}}</label>
+              <div class='attribute-block' data-attribute='{{key}}'>
+                <label
+                  class='attribute-block-label rollable'
+                  data-attribute='{{key}}'
+                  title='Click to roll {{attribute.label}}'
+                >{{attribute.label}}</label>
                 <input
                   class='attribute-block-value'
                   type='number'
