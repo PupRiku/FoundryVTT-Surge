@@ -431,3 +431,87 @@
   padding-bottom: 3px;
   color: #333;
 }
+
+/* === Inventory Tab Styles === */
+.surge .tab.items {
+  padding: 5px; /* Add some padding around the inventory */
+}
+
+.surge .inventory-section {
+  margin-bottom: 15px; /* Space between Weapons/Armor/Gear sections */
+}
+
+.surge .item-list-header {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #333;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 3px;
+  margin: 0 0 5px 0; /* Adjusted margin */
+}
+
+.surge .item-list {
+  list-style: none; /* Remove default list bullets */
+  padding: 0;
+  margin: 0;
+}
+
+.surge .item-list .item {
+  /* Style each row */
+  display: flex;
+  align-items: center; /* Vertically align image, name, controls */
+  gap: 8px;
+  padding: 4px 2px; /* Add slight padding */
+  border-bottom: 1px solid #eee; /* Faint line between items */
+}
+
+.surge .item-list .item:last-child {
+  border-bottom: none; /* Remove line on last item */
+}
+
+.surge .item-list .item .item-image {
+  /* Style item image */
+  flex: 0 0 24px; /* Fixed size */
+  border: none;
+}
+
+.surge .item-list .item .item-name {
+  /* Style item name */
+  flex: 1; /* Allow name to take available space */
+  margin: 0;
+  font-size: 1em;
+  font-weight: normal;
+  white-space: nowrap; /* Prevent wrapping */
+  overflow: hidden; /* Hide overflow */
+  text-overflow: ellipsis; /* Add ... if name is too long */
+}
+
+/* Style optional info like Qty/Wt */
+.surge .item-list .item .item-info {
+  flex: 0 0 60px; /* Give some fixed space */
+  font-size: 0.85em;
+  color: #555;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.surge .item-list .item .item-controls {
+  /* Style edit/delete controls */
+  display: flex;
+  flex: 0 0 auto; /* Don't grow */
+  margin-left: auto; /* Push controls to the right */
+  gap: 8px;
+  text-align: right;
+}
+
+.surge .item-list .item .item-controls a {
+  /* Style the icons */
+  color: #777;
+  text-decoration: none;
+}
+.surge .item-list .item .item-controls a:hover {
+  color: #dd3030; /* Example hover color for delete */
+}
+.surge .item-list .item .item-controls a.item-edit:hover {
+  color: #3080dd; /* Example hover color for edit */
+}
