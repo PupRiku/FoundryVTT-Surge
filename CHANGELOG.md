@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.2] - 2025-04-13
+
+### ✨ Features
+
+- Implemented logic for modified rolls using Shift/Ctrl keys on Skills:
+  - Shift+Click Martial Combat: Performs Melee Weapon Attack roll (Martial Roll + STR Level).
+  - Ctrl+Click Martial Combat: Performs Melee Defense roll (Martial Roll + STR Level).
+  - Ctrl+Click Mystic: Performs Magic Defense roll (Mystic Roll + INT Level).
+- Roll formulas in chat now correctly include added flat modifiers (e.g., `@strlevel`).
+
+### 🐛 Bug Fixes
+
+- Corrected formula string construction in `_performRoll` to properly interpolate modifiers and remove erroneous HTML/placeholders, fixing dice `SyntaxError`.
+
 ## [0.2.1] - 2025-04-13
 
 ### 🐛 Bug Fixes
