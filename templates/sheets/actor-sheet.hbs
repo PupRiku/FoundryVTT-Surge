@@ -120,56 +120,60 @@
 
     {{! Main Tab Content }}
     <div class='tab main' data-group='primary' data-tab='main'>
-      <h2>Attributes</h2>
-      <div class='attributes-list flexcol'>
-        {{! Using flexcol for vertical list }}
-        {{! Loop through attributes defined in template.json }}
-        {{#each systemData.attributes as |attribute key|}}
-          <div class='attribute-item flexrow'>
-            {{! Each attribute is a row }}
-            <label
-              class='attribute-label rollable'
-              data-attribute='{{key}}'
-              title='Click to roll {{attribute.label}}'
-            >{{attribute.label}}</label>
-            <input
-              class='attribute-value'
-              type='number'
-              name='system.attributes.{{key}}.value'
-              value='{{attribute.value}}'
-              data-dtype='Number'
-            />
+      <div class='main-tab-columns'>
+
+        {{! === Attributes Column (Left) === }}
+        <div class='attributes-column'>
+          <h2>Attributes</h2>
+          <div class='attributes-block-list'>
+            {{#each systemData.attributes as |attribute key|}}
+              <div
+                class='attribute-block rollable'
+                data-attribute='{{key}}'
+                title='Click to roll {{attribute.label}}'
+              >
+                <label class='attribute-block-label'>{{attribute.label}}</label>
+                <input
+                  class='attribute-block-value'
+                  type='number'
+                  name='system.attributes.{{key}}.value'
+                  value='{{attribute.value}}'
+                  data-dtype='Number'
+                />
+              </div>
+            {{/each}}
           </div>
-        {{/each}}
-      </div>
-      <hr />
-      {{! Skills Section }}
-      <h2>Skills</h2>
-      <div class='skills-list flexcol'>
-        {{! Container for the skills list }}
-        {{! Loop through skills defined in systemData.skills }}
-        {{#each systemData.skills as |skill key|}}
-          <div class='skill-item flexrow'>
-            {{! Row for each skill }}
-            <label
-              class='skill-label rollable'
-              data-skill='{{key}}'
-              title='Click to roll {{skill.label}}'
-            >{{skill.label}}</label>
-            <input
-              class='skill-value'
-              type='number'
-              name='system.skills.{{key}}.value'
-              value='{{skill.value}}'
-              data-dtype='Number'
-            />
+        </div>
+        {{! End Attributes Column }}
+
+        {{! === Skills Column (Right) === }}
+        <div class='skills-column'>
+          <h2>Skills</h2>
+          <div class='skills-list flexcol'>
+            {{#each systemData.skills as |skill key|}}
+              <div class='skill-item flexrow'>
+                <label
+                  class='skill-label rollable'
+                  data-skill='{{key}}'
+                  title='Click to roll {{skill.label}}'
+                >{{skill.label}}</label>
+                <input
+                  class='skill-value'
+                  type='number'
+                  name='system.skills.{{key}}.value'
+                  value='{{skill.value}}'
+                  data-dtype='Number'
+                />
+              </div>
+            {{/each}}
           </div>
-        {{/each}}
+        </div>
+        {{! End Skills Column }}
       </div>
+      {{! End main-tab-columns }}
       <hr />
       {{! Add another separator after skills }}
       <p>More content coming soon...</p>
-
     </div>
 
     {{! Biography Tab Content }}

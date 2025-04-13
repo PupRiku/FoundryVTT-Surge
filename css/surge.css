@@ -263,8 +263,84 @@
   padding: 5px 0;
 }
 
+/* === Main Tab Column Layout === */
+.surge .main-tab-columns {
+  display: flex;
+  flex-direction: row; /* Arrange columns side-by-side */
+  gap: 20px; /* Space between the columns */
+}
+
+.surge .attributes-column {
+  flex: 0 0 15%; /* Set Attributes column width ~25% */
+  /* max-width: 180px; Optional: uncomment and adjust if needed */
+}
+
+.surge .skills-column {
+  flex: 1; /* Skills column takes the remaining space */
+  border-left: 1px solid #ccc; /* Optional separator line */
+  padding-left: 20px; /* Optional space if border is used */
+}
+
+/* === Adjust Headings if needed === */
+.surge .attributes-column h2,
+.surge .skills-column h2 {
+  margin-top: 0; /* Remove top margin for headings in columns */
+}
+
+/* === Styles for New Attribute Block List === */
+.surge .attributes-block-list {
+  display: flex;
+  flex-direction: column; /* Stack attribute blocks vertically */
+  gap: 8px; /* Space between attribute blocks */
+  align-items: center;
+}
+
+/* Style individual attribute blocks like the level block */
+.surge .attribute-block {
+  background-color: #fafafa; /* Light background */
+  border: 1px solid #ddd;
+  border-radius: 8px; /* Slightly less rounded than level? */
+  padding: 5px 8px; /* Adjust padding */
+  display: flex;
+  flex-direction: column; /* Label above value */
+  align-items: center; /* Center content */
+  cursor: pointer; /* Make whole block feel clickable */
+  transition: background-color 0.2s ease; /* Smooth hover */
+  width: 50%;
+  max-width: 120px;
+  min-width: 80px;
+}
+
+.surge .attribute-block:hover {
+  background-color: #f0f0f0;
+  border-color: #ccc;
+}
+
+.surge .attribute-block-label {
+  font-size: 0.8em;
+  font-weight: bold;
+  color: #555;
+  /* No text decoration needed if whole block is clickable */
+  /* border-bottom: 1px dashed #999; */
+}
+
+/* Style the input to look more like the level value */
+.surge .attribute-block-value {
+  font-size: 1.8em; /* Make value prominent */
+  font-weight: bold;
+  color: #333;
+  width: 80%; /* Control input width */
+  max-width: 60px;
+  text-align: center;
+  border: none; /* Hide border/bg until focus */
+  background: none;
+  border-radius: 3px;
+  padding: 1px;
+  margin-top: 2px;
+  cursor: text; /* Indicate text input */
+}
+
 /* Styling for Lists (Attributes, Skills, Passives) */
-.surge .attributes-list,
 .surge .skills-list {
   display: flex;
   flex-direction: column;
@@ -273,8 +349,14 @@
   padding: 0 5px; /* Indent lists slightly */
 }
 
+.surge .attribute-block-value:focus,
+.surge .attribute-block-value:hover {
+  border: 1px solid #aaa;
+  background-color: white;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
 /* Styling for Items within Lists */
-.surge .attribute-item,
 .surge .skill-item {
   display: flex;
   flex-direction: row;
@@ -284,13 +366,11 @@
   border-bottom: 1px solid #eee; /* Faint line between items */
 }
 /* Remove border for last item */
-.surge .attribute-item:last-child,
 .surge .skill-item:last-child {
   border-bottom: none;
 }
 
 /* Styling Labels */
-.surge .attribute-label,
 .surge .skill-label {
   flex: 1; /* Allow label to take up space */
   /* Removed fixed width - let flexbox handle it or adjust later */
@@ -314,7 +394,6 @@
 }
 
 /* Styling Input Fields and Values */
-.surge .attribute-value,
 .surge .skill-value {
   flex: 0 0 60px; /* Fixed width for value inputs/spans */
   text-align: center;
