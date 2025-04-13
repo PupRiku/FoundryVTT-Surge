@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0] - 2025-04-13
+
+### ✨ Features
+
+- Implemented basic Inventory tab layout in `actor-sheet.hbs`.
+- Owned items are now displayed, categorized into Weapons, Armor/Shields, and Gear/Equipment sections using Handlebars helpers (`#each`, `#if`, `eq`, `or`).
+- Each item shows its icon, name, quantity/weight (where applicable), and placeholder edit/delete controls.
+- Reordered sheet tabs to Main | Inventory | Biography.
+
+### 🔧 Maintenance
+
+- Added CSS rules to style the inventory list sections, item rows, and controls.
+
 ## [0.2.2] - 2025-04-13
 
 ### ✨ Features
