@@ -89,7 +89,7 @@ export class SurgeCharacterSheet extends ActorSheet {
       // Create a simple key like 'strLevel' or 'mod' from the label for the data object
       const modKey =
         modifierLabel.toLowerCase().replace(/[^a-z0-9]/g, '') || 'modifier';
-      formula += ` <span class="math-inline">\{modSign\} @</span>{modKey}`; // Use @modKey in formula
+      formula += ` ${modSign} @${modKey}`;
       rollDataObject[modKey] = flatModifier; // Add modifier value to data
     }
 
@@ -228,21 +228,67 @@ export class SurgeCharacterSheet extends ActorSheet {
 
   /**
    * Handle clicking on a skill label to roll it.
+   * Checks for Shift/Ctrl keys for modified rolls (e.g., Melee Attack/Defense).
    * @param {Event} event The triggering click event
    * @private
    */
   async _onSkillRoll(event) {
     event.preventDefault();
     const element = event.currentTarget;
-    // Get skill key from data-skill="clerical" (or similar)
-    const skillKey = element.dataset.skill;
+    const skillKey = element.dataset.skill; // data-skill="clerical" etc.
     const skill = this.actor.system.skills[skillKey];
+    const actorAttributes = this.actor.system.attributes; // Get attributes object
 
     if (skill) {
-      const label = `${skill.label} Check`; // e.g., "Culture Check"
       const level = skill.value;
-      // Perform the basic roll using the skill level
-      await this._performRoll(level, label);
+      let label = `${skill.label} Check`; // Default: "Martial Combat Check"
+      let flatModifier = 0;
+      let modifierLabel = '';
+
+      // --- Check for Modifier Keys and specific skills ---
+      const isShift = event.shiftKey;
+      const isCtrl = event.ctrlKey || event.metaKey; // Use Ctrl (or Cmd on Mac)
+
+      // --- Variations for Martial Combat ---
+      if (skillKey === 'martial') {
+        const strLevel = actorAttributes.str?.value ?? 0; // Get STR Level safely
+
+        if (isShift) {
+          // Shift + Click = Melee Weapon Attack Roll
+          label = `Melee Weapon Attack (${skill.label})`;
+          flatModifier = strLevel; // Add STR Level value
+          modifierLabel = 'STR Level'; // Label for the modifier in roll formula/tooltip
+          // Note: We assume any Shift+Click is a WEAPON attack for now.
+          //       Unarmed attack (no STR bonus) would just be a normal click.
+        } else if (isCtrl) {
+          // Ctrl + Click = Melee Defense Roll
+          label = `Melee Defense (${skill.label})`;
+          flatModifier = strLevel; // Add STR Level value
+          modifierLabel = 'STR Level'; // Label for the modifier
+          // TODO: Add logic here later to find equipped shield bonus and add it too
+          // TODO: flatModifier += shieldBonus;
+        }
+        // Else (no modifier key): Basic Martial Combat check (uses default label/mods)
+      } // --- Variations for Mystic ---
+      else if (skillKey === 'mystic') {
+        const intLevel = actorAttributes.int?.value ?? 0; // Get INT Level safely
+
+        if (isCtrl) {
+          // Ctrl + Click = Magic Defense Roll (example)
+          label = `Magic Defense (${skill.label})`;
+          flatModifier = intLevel; // Add INT Level value
+          modifierLabel = 'INT Level'; // Label for the modifie
+        }
+        // Else (no modifier key / Shift): Basic Mystic check (or maybe Shift for attack?)
+        // TODO: Add logic for Mystic Attack rolls if needed
+      }
+      // --- Variations for Dexterity (using _onAttributeRoll might be better) ---
+      // Note: Ranged Defense uses Dexterity Attribute, not a skill.
+      // We would modify _onAttributeRoll similarly if triggering from attribute label.
+      // else if (attributeKey === "dex" && isCtrl) { ... } in _onAttributeRoll
+
+      // Perform the roll using the (potentially modified) parameters
+      await this._performRoll(level, label, flatModifier, modifierLabel);
     } else {
       console.error(`SURGE | Could not find skill data for key: ${skillKey}`);
       ui.notifications.warn(`Skill data not found for key: ${skillKey}`);
