@@ -183,20 +183,19 @@ export class SurgeCharacterSheet extends ActorSheet {
   activateListeners(html) {
     // Call the parent class's activateListeners method
     super.activateListeners(html);
-
     console.log('SURGE! | Activating Listeners');
 
     // --- Roll Listeners ---
-
-    // Listener for Attribute Blocks (make sure block has .rollable)
     html
       .find('.attribute-block-label.rollable')
       .click(this._onAttributeRoll.bind(this));
-
-    // Listener for Skill Labels
     html.find('.skill-label.rollable').click(this._onSkillRoll.bind(this));
 
-    // Add more listeners later (e.g., for items, weapons)
+    // --- Item Control Listeners ---
+    html.find('.item-edit').click(this._onItemEdit.bind(this));
+    html.find('.item-delete').click(this._onItemDelete.bind(this));
+
+    // Add more listeners later (e.g., roll damage from item)
   }
 
   /**
@@ -295,7 +294,92 @@ export class SurgeCharacterSheet extends ActorSheet {
     }
   }
 
-  // Define other event handler methods like _onItemAttack, _onItemEdit, etc.
+  /**
+   * Handle clicking the edit icon on an item row.
+   * Opens the item's configuration sheet.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  _onItemEdit(event) {
+    event.preventDefault();
+    const element = event.currentTarget;
+    // Find the parent list item (li) which has the data-item-id
+    const li = element.closest('.item');
+    const itemId = li?.dataset?.itemId; // Safely get the item ID
+
+    if (itemId) {
+      // Get the Item document from the Actor's owned items
+      const item = this.actor.items.get(itemId);
+      if (item) {
+        // Render the item's sheet (opens the edit dialog)
+        item.sheet.render(true);
+      } else {
+        console.warn(
+          `SURGE | Edit clicked for non-existent item ID: ${itemId}`
+        );
+        ui.notifications.warn('Could not find the item to edit.');
+      }
+    } else {
+      console.error(
+        'SURGE | Could not find item ID for edit button in parent LI element.'
+      );
+    }
+  }
+
+  /**
+   * Handle clicking the delete icon on an item row.
+   * Prompts for confirmation before deleting the item from the actor.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onItemDelete(event) {
+    // Needs to be async because Dialog.confirm returns a Promise
+    event.preventDefault();
+    const element = event.currentTarget;
+    const li = element.closest('.item');
+    const itemId = li?.dataset?.itemId;
+
+    if (!itemId) {
+      console.error(
+        'SURGE | Could not find item ID for delete button in parent LI element.'
+      );
+      return;
+    }
+
+    const item = this.actor.items.get(itemId);
+    if (!item) {
+      console.warn(
+        `SURGE | Delete clicked for non-existent item ID: ${itemId}`
+      );
+      ui.notifications.warn('Could not find the item to delete.');
+      return;
+    }
+
+    // Use Foundry's built-in confirmation dialog
+    Dialog.confirm({
+      title: `Delete ${item.name}`,
+      content: `<p>Are you sure you want to delete the item "<strong>${item.name}</strong>"?</p><p>This action cannot be undone.</p>`,
+      // 'yes' callback is executed if the user confirms
+      yes: async () => {
+        console.log(`SURGE | Deleting item: ${item.name} (${itemId})`);
+        try {
+          // Delete the item from the actor's embedded documents
+          await this.actor.deleteEmbeddedDocuments('Item', [itemId]);
+          // Note: The sheet usually re-renders automatically after deletion,
+          // but you could force it with this.render(false); if needed.
+        } catch (err) {
+          console.error('SURGE | Failed to delete item:', err);
+          ui.notifications.error(`Failed to delete ${item.name}.`);
+        }
+      },
+      // 'no' callback is executed if the user cancels
+      no: () => {
+        console.log(`SURGE | Deletion cancelled for item: ${item.name}`);
+      },
+      defaultYes: false, // Make the "No" button the default action
+    });
+  }
+  // Define other event handler methods like _onItemAttack, etc.
   // Remember to use async for functions that perform rolls or update the actor.
 } // End of SurgeCharacterSheet class
 

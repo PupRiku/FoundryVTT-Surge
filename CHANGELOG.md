@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.1] - 2025-04-13
+
+### ✨ Features
+
+- Implemented basic inventory item management via controls on the Inventory tab:
+  - Edit button (<i class="fas fa-edit"></i>) now opens the corresponding item's sheet.
+  - Delete button (<i class="fas fa-trash"></i>) now prompts for confirmation and deletes the item from the actor.
+
+### 🔧 Maintenance
+
+- Added click listeners and handler methods (`_onItemEdit`, `_onItemDelete`) to `SurgeCharacterSheet` for item controls.
+- Utilized Foundry's `Dialog.confirm` for delete safety.
+
 ## [0.3.0] - 2025-04-13
 
 ### ✨ Features
