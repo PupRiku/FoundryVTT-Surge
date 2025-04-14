@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.5.1] - 2025-04-14
+
+### 🐛 Bug Fixes
+
+- Fixed Description field (`{{editor}}` helper) not rendering correctly on Item Sheet by adjusting wrapper HTML.
+- Replaced deprecated `{{select}}` Handlebars helper with `{{selectOptions}}` for dropdowns (Weapon Type, Skill Used) on Item Sheet, resolving console warnings.
+
+### 🔧 Maintenance
+
+- Added data preparation for select options (`weaponTypes`, `weaponSkills`) in `SurgeItemSheet.getData()`.
+
+## [0.5.0] - 2025-04-14
+
+### ✨ Features
+
+- Implemented basic Item Sheet (`SurgeItemSheet`, `item-sheet.hbs`).
+- Items can now be opened and edited via the UI.
+- Added display and input fields for common item properties (Description, Quantity, Weight, Price).
+- Added type-specific input fields for Weapon properties (Damage, Range, Skill, Type, Hands, Actions, Menace, etc.) using Handlebars conditionals.
+- Added basic CSS grid layout helpers for item sheet.
+
+### 🔧 Maintenance
+
+- Created `module/item-sheet.js` and `templates/sheets/item-sheet.hbs`.
+- Registered `SurgeItemSheet` for most standard item types.
+
 ## [0.4.2] - 2025-04-14
 
 ### ✨ Features

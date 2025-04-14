@@ -23,12 +23,221 @@
 
   {{! Item Sheet Body }}
   <section class='sheet-body'>
-    {{! We will add inputs for description, weight, price, and type-specific fields here }}
-    <p>Item Sheet for
-      {{item.name}}
-      (Type:
-      {{item.type}}) - Content coming soon!</p>
-    <p>(Data is being loaded - check console log!)</p>
+    {{! Tabs could go here later if needed for complex items }}
+    {{! <nav class="sheet-tabs tabs" data-group="primary"><a class="item active" data-tab="description">Description</a><a class="item" data-tab="details">Details</a></nav> }}
+    <div class='item-sheet-content'>
+      {{! Wrapper for padding/styling }}
+
+      {{! Common Fields Section }}
+      <div class='form-group'>
+        <label>Description</label>
+        {{! Use editor for potentially long descriptions }}
+        {{editor
+          systemData.description
+          target='system.description'
+          button=true
+          owner=owner
+          editable=editable
+        }}
+      </div>
+
+      {{! Grid for common numerical stats }}
+      <div class='grid grid-3col'>
+        <div class='form-group'>
+          <label>Quantity</label>
+          <input
+            type='number'
+            name='system.quantity'
+            value='{{systemData.quantity}}'
+            data-dtype='Number'
+          />
+        </div>
+        <div class='form-group'>
+          <label>Weight</label>
+          {{! Changed from Encumbrance }}
+          <input
+            type='number'
+            step='any'
+            name='system.weight'
+            value='{{systemData.weight}}'
+            data-dtype='Number'
+          />
+        </div>
+        <div class='form-group'>
+          <label>Price (Gold)</label>
+          {{! Changed from Cost }}
+          <input
+            type='number'
+            name='system.price'
+            value='{{systemData.price}}'
+            data-dtype='Number'
+          />
+        </div>
+      </div>
+      <hr />
+
+      {{! === Type-Specific Fields === }}
+      {{! Use #if blocks to show fields only for the correct item type }}
+
+      {{! Weapon Fields }}
+      {{#if (eq item.type 'weapon')}}
+        <div class='weapon-details item-details-section'>
+          <h3>Weapon Details</h3>
+          <div class='grid grid-3col'>
+            <div class='form-group'>
+              <label>Weapon Type</label>
+              <select name='system.weaponType'>
+                {{selectOptions
+                  weaponTypes
+                  selected=systemData.weaponType
+                  localize=false
+                }}
+              </select>
+            </div>
+            <div class='form-group'>
+              <label>Skill Used</label>
+              <select name='system.skillUsed'>
+                {{selectOptions
+                  weaponSkills
+                  selected=systemData.skillUsed
+                  localize=false
+                }}
+              </select>
+            </div>
+            <div class='form-group'>
+              <label>Hands Required</label>
+              <input
+                type='number'
+                name='system.hands'
+                value='{{systemData.hands}}'
+                data-dtype='Number'
+                placeholder='e.g., 1 or 2'
+              />
+            </div>
+          </div>
+          <div class='grid grid-3col'>
+            <div class='form-group'>
+              <label>Damage Formula</label>
+              <input
+                type='text'
+                name='system.damage.formula'
+                value='{{systemData.damage.formula}}'
+                placeholder='e.g., 1d6 or 2d6+2'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Damage Type</label>
+              <input
+                type='text'
+                name='system.damage.type'
+                value='{{systemData.damage.type}}'
+                placeholder='e.g., Physical'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Range</label>
+              <input
+                type='text'
+                name='system.range'
+                value='{{systemData.range}}'
+                placeholder='e.g., 5 ft. or 160 ft.'
+              />
+            </div>
+          </div>
+          <div class='grid grid-3col'>
+            <div class='form-group'>
+              <label>Actions (Attack)</label>
+              <input
+                type='number'
+                name='system.actionsAttack'
+                value='{{systemData.actionsAttack}}'
+                data-dtype='Number'
+                placeholder='e.g., 1'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Actions (Reload)</label>
+              <input
+                type='number'
+                name='system.actionsReload'
+                value='{{systemData.actionsReload}}'
+                data-dtype='Number'
+                placeholder='e.g., 0 or 1'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Menace Contribution</label>
+              <input
+                type='number'
+                name='system.menaceContribution'
+                value='{{systemData.menaceContribution}}'
+                data-dtype='Number'
+                placeholder='e.g., 0, 1, 2'
+              />
+            </div>
+          </div>
+          <div class='form-group'>
+            <label>Ammo Type Used</label>
+            <input
+              type='text'
+              name='system.ammoType'
+              value='{{systemData.ammoType}}'
+              placeholder='e.g., arrow, bolt (if ranged)'
+            />
+          </div>
+          <div class='form-group'>
+            <label>Era</label>
+            <input
+              type='text'
+              name='system.era'
+              value='{{systemData.era}}'
+              placeholder='e.g., Medieval'
+            />
+          </div>
+          <div class='form-group'>
+            <label>Specialties</label>
+            <textarea
+              name='system.specialties'
+              rows='3'
+              placeholder='Describe special abilities like Cleave...'
+            >{{systemData.specialties}}</textarea>
+          </div>
+        </div>
+      {{/if}}
+      {{! End Weapon Fields }}
+
+      {{! TODO: Add #if blocks here for armor, shield, gear, etc. }}
+      {{! Example for Armor (very basic) }}
+      {{#if (eq item.type 'armor')}}
+        <div class='armor-details item-details-section'>
+          <h3>Armor Details</h3>
+          <div class='form-group'>
+            <label>Armor Type</label>
+            <select name='system.armorType'>
+              {{#select systemData.armorType}}
+                <option value='light'>Light</option>
+                <option value='medium'>Medium</option>
+                <option value='heavy'>Heavy</option>
+                {{! Add Kevlar Vest as type? Or handle differently? }}
+              {{/select}}
+            </select>
+          </div>
+          <div class='form-group'>
+            <label>Menace Contribution</label>
+            <input
+              type='number'
+              name='system.menaceContribution'
+              value='{{systemData.menaceContribution}}'
+              data-dtype='Number'
+            />
+          </div>
+          {{! Displaying/Editing DR and Penalties arrays needs more advanced handling - maybe later }}
+          <p>Damage Reduction / Penalties editor coming soon...</p>
+        </div>
+      {{/if}}
+      {{! End Armor Fields }}
+    </div>
+    {{! End item-sheet-content }}
   </section>
 
 </form>

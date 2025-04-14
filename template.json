@@ -112,8 +112,8 @@
         "type": "Physical"
       },
       "era": "Medieval",
-      "weaponType": "melee",
-      "skillUsed": "martial",
+      "weaponType": "",
+      "skillUsed": "",
       "ammoType": ""
     },
     "armor": {

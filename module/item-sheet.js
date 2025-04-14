@@ -50,6 +50,20 @@ export class SurgeItemSheet extends ItemSheet {
     // context.item is the Item document, context.item.system is your data
     context.systemData = context.item.system;
 
+    // Define choices for the dropdowns
+    context.weaponTypes = {
+      '': ' - Select - ', // Add a blank default
+      melee: 'Melee',
+      ranged: 'Ranged',
+    };
+    context.weaponSkills = {
+      '': ' - Select - ', // Add a blank default
+      martial: 'Martial Combat',
+      marksmanship: 'Marksmanship',
+      mystic: 'Mystic', // Added Mystic as an option based on earlier rules
+      // Add any other relevant skills here
+    };
+
     // We can add more data preparation here later if needed (e.g., config lookups)
     // context.config = CONFIG.SURGE;
 
