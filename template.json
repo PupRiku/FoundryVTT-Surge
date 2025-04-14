@@ -125,8 +125,8 @@
       "equipped": false,
       "menaceContribution": 0,
       "damageReduction": [],
-      "skillPenalties": [{ "skill": "guile", "penalty": 3 }],
-      "attributePenalties": [{ "attribute": "dex", "penalty": 1 }],
+      "skillPenalties": [],
+      "attributePenalties": [],
       "plateSlots": 0
     },
     "shield": {
@@ -138,8 +138,8 @@
       "equipped": false,
       "menaceContribution": 0,
       "hp": { "value": 0, "max": 0 },
-      "defenseBonus": 3,
-      "attributePenalties": [{ "attribute": "dex", "penalty": 1 }],
+      "defenseBonus": 0,
+      "attributePenalties": [],
       "special": ""
     },
     "plate": {
