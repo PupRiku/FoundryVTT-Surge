@@ -515,3 +515,45 @@
 .surge .item-list .item .item-controls a.item-edit:hover {
   color: #3080dd; /* Example hover color for edit */
 }
+
+/* === Biography Tab Styles === */
+.surge .tab.description .biography-content {
+  padding: 5px; /* Add padding around the whole bio section */
+}
+
+.surge .tab.description .biography-section {
+  margin-bottom: 15px; /* Space between text editor sections */
+}
+
+.surge .tab.description h4 {
+  margin: 5px 0 3px 0;
+  font-weight: bold;
+  font-size: 1em; /* Standard heading size */
+  color: #444;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 3px;
+}
+
+/* Style the container created by the {{editor}} helper */
+.surge .tab.description .editor {
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background-color: #fdfdfd;
+  min-height: 100px; /* Give editor display some default height */
+  padding: 5px;
+  /* Ensure ProseMirror content displays nicely */
+  overflow-y: auto;
+}
+
+.surge .tab.description .editor-content {
+  min-height: 80px; /* Ensure inner content area has height */
+}
+
+/* Style the button added by editor helper */
+.surge .tab.description .editor-edit {
+  margin-left: 5px;
+  color: #777;
+}
+.surge .tab.description .editor-edit:hover {
+  color: #333;
+}

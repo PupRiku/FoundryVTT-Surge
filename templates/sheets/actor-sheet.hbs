@@ -293,17 +293,90 @@
     {{! Biography Tab Content }}
     <div class='tab description' data-group='primary' data-tab='description'>
       <h2>Biography</h2>
-      {{! Use Foundry's rich text editor helper }}
-      {{editor
-        systemData.biography.appearance
-        target='system.biography.appearance'
-        button=true
-        owner=owner
-        editable=editable
-      }}
-      {{! Add other biography fields (origin, allies, etc.) here later }}
-      <p>More biography fields coming soon...</p>
+
+      {{! Use a wrapper div for styling/spacing if desired }}
+      <div class='biography-content'>
+        <div class='biography-section'>
+          <h4>Appearance / What Others See</h4>
+          {{! This helper creates the display area and the edit button }}
+          {{editor
+            systemData.biography.appearance
+            target='system.biography.appearance'
+            button=true
+            owner=owner
+            editable=editable
+          }}
+        </div>
+
+        <div class='biography-section'>
+          <h4>Origin / Where From?</h4>
+          {{editor
+            systemData.biography.origin
+            target='system.biography.origin'
+            button=true
+            owner=owner
+            editable=editable
+          }}
+        </div>
+
+        <div class='biography-section'>
+          <h4>Involvement / How did they get here?</h4>
+          {{editor
+            systemData.biography.involved
+            target='system.biography.involved'
+            button=true
+            owner=owner
+            editable=editable
+          }}
+        </div>
+
+        <div class='biography-section'>
+          <h4>Motivation / Why are they here?</h4>
+          {{editor
+            systemData.biography.why_here
+            target='system.biography.why_here'
+            button=true
+            owner=owner
+            editable=editable
+          }}
+        </div>
+
+        <div class='biography-section'>
+          <h4>Aspirations / Goals</h4>
+          {{editor
+            systemData.biography.aspirations
+            target='system.biography.aspirations'
+            button=true
+            owner=owner
+            editable=editable
+          }}
+        </div>
+
+        <div class='biography-section'>
+          <h4>Allies & Enemies</h4>
+          {{editor
+            systemData.biography.allies_enemies
+            target='system.biography.allies_enemies'
+            button=true
+            owner=owner
+            editable=editable
+          }}
+        </div>
+
+        <div class='biography-section'>
+          <h4>General Notes</h4>
+          {{editor
+            systemData.biography.notes
+            target='system.biography.notes'
+            button=true
+            owner=owner
+            editable=editable
+          }}
+        </div>
+      </div>
+      {{! End biography-content }}
     </div>
+    {{! End Biography Tab }}
 
   </section>
   {{! End Sheet Body }}

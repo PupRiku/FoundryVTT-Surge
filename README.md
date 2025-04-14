@@ -33,7 +33,7 @@ Foundry will download and install the system. You can then create a new world us
   - **Header:** Displays Character Name (editable), Image (editable), styled Level block, and Passives Grid (HP, Recovery, Movement, Actions, En-Counter, Menace).
   - **Main Tab:** Displays Attributes (block style, editable) and Skills (row style, editable) in a two-column layout.
   - **Inventory Tab:** Displays owned items categorized by type (Weapons, Armor/Shields, Gear/Equipment) with icon, name, basic info, and functional Edit/Delete buttons.
-  - **Biography Tab:** Basic placeholder tab exists.
+  - **Biography Tab:** Displays editable text boxes with suggested categories.
 - **Dice Rolling:**
   - Core SURGE! roll mechanic implemented (`Xd6x6+Y` based on level lookup).
   - Clicking Attribute labels/blocks or Skill labels triggers base checks.
@@ -43,7 +43,6 @@ Foundry will download and install the system. You can then create a new world us
 
 ## Planned / To-Do Features
 
-- Full implementation of Biography tab layout (`{{editor}}`).
 - Combat Rolls triggered from Weapon items (Attack & Damage).
 - Implementation of Shield/Armor bonuses in defense rolls.
 - Calculation of Total Menace based on equipped items.
