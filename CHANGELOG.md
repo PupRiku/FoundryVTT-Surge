@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0] - 2025-04-14
+
+### ✨ Features
+
+- Implemented Combat Rolls from Inventory Items:
+  - Added Attack `<i class="fas fa-fist-raised"></i>` and Damage `<i class="fas fa-dice-d6"></i>` buttons to Weapon items in the Inventory tab.
+  - Attack button triggers appropriate skill roll (`Martial Combat` or `Marksmanship`) including STR level bonus for melee weapons.
+  - Damage button triggers a separate damage roll using the weapon's damage formula.
+  - Both attack and damage rolls correctly implement the SURGE mechanic (`x6` exploding dice).
+- Added `_performDamageRoll` helper function to handle damage-specific rolling.
+
+### 🔧 Maintenance
+
+- Added listeners and handlers (`_onItemAttackRoll`, `_onItemDamageRoll`) for new item roll buttons.
+- Updated HBS template for inventory weapon items.
+
 ## [0.3.3] - 2025-04-13
 
 ### ✨ Features

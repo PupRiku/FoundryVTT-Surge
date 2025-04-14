@@ -195,12 +195,23 @@
                   height='24'
                 />
                 <h4 class='item-name'>{{item.name}}</h4>
-                {{! Add controls }}
                 <div class='item-controls'>
+                  {{! Equip Toggle }}
                   <a class="item-control item-toggle-equip {{#if system.equipped}}active{{/if}}"
                     title="{{#if system.equipped}}Equipped (Click to Unequip){{else}}Unequipped (Click to Equip){{/if}}">
                     <i class="fas fa-shield-alt"></i>
                   </a>
+
+                  {{! ADD Attack Roll Button }}
+                  <a class="item-control item-roll-attack" title="Roll Attack">
+                    <i class="fas fa-fist-raised"></i>
+                  </a>
+                  {{! ADD Damage Roll Button }}
+                  <a class="item-control item-roll-damage" title="Roll Damage">
+                    <i class="fas fa-dice-d6"></i>
+                  </a>
+
+                  {{! Edit/Delete }}
                   <a class='item-control item-edit' title='Edit Item'><i
                       class='fas fa-edit'
                     ></i></a>

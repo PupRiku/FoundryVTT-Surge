@@ -196,6 +196,10 @@ export class SurgeCharacterSheet extends ActorSheet {
       .find('.item-toggle-equip')
       .click(this._onItemToggleEquipped.bind(this));
 
+    // --- ADD Item Roll Listeners ---
+    html.find('.item-roll-attack').click(this._onItemAttackRoll.bind(this));
+    html.find('.item-roll-damage').click(this._onItemDamageRoll.bind(this));
+
     // Add more listeners later (e.g., roll damage from item)
   }
 
@@ -432,6 +436,117 @@ export class SurgeCharacterSheet extends ActorSheet {
       );
     }
   }
+
+  /**
+   * Handle clicking the attack button on a weapon item.
+   * Performs the attack roll using the weapon's skill and relevant modifiers.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onItemAttackRoll(event) {
+    event.preventDefault();
+    const element = event.currentTarget;
+    const li = element.closest('.item');
+    const itemId = li?.dataset?.itemId;
+    const item = this.actor.items.get(itemId); // This is the weapon item
+
+    // Ensure it's a weapon
+    if (!item || item.type !== 'weapon') return;
+
+    // Determine skill and level
+    const skillKey = item.system.skillUsed || 'martial'; // Default to martial if not specified? Or fetch from type?
+    const skill = this.actor.system.skills[skillKey];
+    const skillLevel = skill?.value ?? 1; // Default to level 1 if skill somehow missing
+
+    // Determine label and modifiers
+    let label = `${item.name} Attack (${skill?.label || skillKey})`;
+    let flatModifier = 0;
+    let modifierLabel = '';
+
+    // Add STR Level bonus ONLY for Melee Weapon attacks using Martial skill
+    if (item.system.weaponType === 'melee' && skillKey === 'martial') {
+      flatModifier = this.actor.system.attributes.str?.value ?? 0;
+      modifierLabel = 'STR Level';
+    }
+    // Add other potential modifiers later (e.g. from status effects, temporary bonuses)
+
+    // Perform the roll using the existing helper function
+    await this._performRoll(skillLevel, label, flatModifier, modifierLabel);
+  }
+
+  /**
+   * Handle clicking the damage button on a weapon item.
+   * Performs the damage roll using the weapon's damage formula.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onItemDamageRoll(event) {
+    event.preventDefault();
+    const element = event.currentTarget;
+    const li = element.closest('.item');
+    const itemId = li?.dataset?.itemId;
+    const item = this.actor.items.get(itemId); // This is the weapon item
+
+    // Ensure it's a weapon and has damage defined
+    if (!item || item.type !== 'weapon') return;
+    if (!item.system?.damage?.formula) {
+      ui.notifications.warn(
+        `Weapon "${item.name}" has no damage formula defined.`
+      );
+      return;
+    }
+
+    const damageFormula = item.system.damage.formula;
+    const damageType = item.system.damage.type || 'Physical'; // Default type if missing
+    let label = `${item.name} Damage`;
+    if (damageType) {
+      label += ` (${damageType})`;
+    }
+
+    // Call the new damage roll helper
+    await this._performDamageRoll(damageFormula, label, damageType);
+  }
+
+  /**
+   * Performs a SURGE! system damage roll, adding the 'x6' surge rule.
+   * @param {string} formula      The base damage formula (e.g., "1d6", "2d6+2").
+   * @param {string} label        The label for the chat message.
+   * @param {string} [damageType=""] Optional damage type for context.
+   * @returns {Promise<void>}     Sends the result to chat.
+   * @private
+   */
+  async _performDamageRoll(formula, label, damageType = '') {
+    // Ensure 'x6' is added to d6s for SURGE, but not if already present (e.g., d6x)
+    // This regex looks for 'd6' NOT immediately followed by 'x' or another digit.
+    const surgeFormula = formula.replace(/d6(?![x0-9])/gi, 'd6x6');
+
+    console.log(
+      `SURGE | Rolling Damage - Base: ${formula}, Surge: ${surgeFormula}, Label: ${label}`
+    );
+
+    // Prepare roll data (mostly for context, damage usually doesn't use @attributes)
+    const rollData = this.actor.getRollData() ?? {};
+
+    const roll = new Roll(surgeFormula, rollData);
+    try {
+      await roll.evaluate(); // Use default async evaluate
+
+      // TODO: Apply damage to targets later using hooks or chat message parsing
+
+      await roll.toMessage({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        flavor: label,
+        // Could add flags for automation: flags: { surge: { damage: roll.total, type: damageType, itemId: item.id } }
+      });
+    } catch (err) {
+      console.error(
+        `SURGE | Damage roll evaluation failed for formula "${surgeFormula}":`,
+        err
+      );
+      ui.notifications.error(`Failed to evaluate damage roll for ${label}.`);
+    }
+  }
+
   // Define other event handler methods like _onItemAttack, etc.
   // Remember to use async for functions that perform rolls or update the actor.
 } // End of SurgeCharacterSheet class
