@@ -716,3 +716,49 @@
 .surge.sheet.item .form-group {
   overflow: visible;
 }
+
+/* === Item Sheet Readonly Lists === */
+.surge.sheet.item .readonly-list {
+  border: 1px solid #eee;
+  background-color: #f8f8f8;
+  padding: 5px 8px; /* Match input padding */
+  min-height: 2.2em; /* Roughly input height + padding */
+  font-size: 0.9em;
+  color: #333;
+  border-radius: 3px;
+  line-height: 1.6; /* Spacing if multiple items wrap */
+}
+.surge.sheet.item .readonly-list span.dr-item,
+.surge.sheet.item .readonly-list span.penalty-item {
+  display: inline-block; /* Allow multiple on one line */
+  margin-right: 10px;
+  padding: 2px 5px;
+  background-color: #e9ecef; /* Slightly darker background */
+  border: 1px solid #dee2e6;
+  border-radius: 3px;
+  font-size: 0.95em;
+  white-space: nowrap; /* Prevent wrapping within a single item */
+}
+.surge.sheet.item .readonly-list > span {
+  /* Style the 'None' text */
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Styling for HP resource inputs on item sheet */
+.surge.sheet.item .form-group.resource .resource-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.surge.sheet.item .form-group.resource input {
+  width: 60px; /* Fixed width for HP inputs */
+  flex: 0 0 60px;
+  text-align: center;
+}
+.surge.sheet.item .form-group.resource span {
+  /* Style the '/' */
+  flex: 0 0 auto;
+  padding: 0 2px;
+  font-weight: bold;
+}

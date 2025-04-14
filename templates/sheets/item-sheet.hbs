@@ -206,36 +206,168 @@
       {{/if}}
       {{! End Weapon Fields }}
 
-      {{! TODO: Add #if blocks here for armor, shield, gear, etc. }}
-      {{! Example for Armor (very basic) }}
+      {{! === Armor Fields === }}
       {{#if (eq item.type 'armor')}}
         <div class='armor-details item-details-section'>
           <h3>Armor Details</h3>
+          <div class='grid grid-3col'>
+            {{! Grid for simple fields }}
+            <div class='form-group'>
+              <label>Armor Type</label>
+              <select name='system.armorType'>
+                {{selectOptions
+                  armorTypes
+                  selected=systemData.armorType
+                  localize=false
+                }}
+              </select>
+            </div>
+            <div class='form-group'>
+              <label>Menace Contribution</label>
+              <input
+                type='number'
+                name='system.menaceContribution'
+                value='{{systemData.menaceContribution}}'
+                data-dtype='Number'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Kevlar Plate Slots</label>
+              <input
+                type='number'
+                name='system.plateSlots'
+                value='{{systemData.plateSlots}}'
+                data-dtype='Number'
+                title='Number of plates the Kevlar Vest can hold'
+              />
+            </div>
+          </div>
+          {{! End grid }}
+
+          {{! Display complex array fields (Read-Only for now) }}
           <div class='form-group'>
-            <label>Armor Type</label>
-            <select name='system.armorType'>
-              {{#select systemData.armorType}}
-                <option value='light'>Light</option>
-                <option value='medium'>Medium</option>
-                <option value='heavy'>Heavy</option>
-                {{! Add Kevlar Vest as type? Or handle differently? }}
-              {{/select}}
-            </select>
+            <label>Damage Reduction</label>
+            <div class='dr-list readonly-list'>
+              {{#each systemData.damageReduction as |dr id|}}
+                {{! Display each DR entry }}
+                <span class='dr-item'>{{dr.amount}}
+                  {{dr.type}}
+                  vs
+                  {{dr.source}}</span>
+              {{else}}
+                {{! Show 'None' if array is empty }}
+                <span>None</span>
+              {{/each}}
+            </div>
           </div>
           <div class='form-group'>
-            <label>Menace Contribution</label>
-            <input
-              type='number'
-              name='system.menaceContribution'
-              value='{{systemData.menaceContribution}}'
-              data-dtype='Number'
-            />
+            <label>Attribute Penalties</label>
+            <div class='penalty-list readonly-list'>
+              {{#each systemData.attributePenalties as |pen id|}}
+                {{! Display each penalty entry }}
+                <span class='penalty-item'>-{{pen.penalty}}
+                  {{pen.attribute}}
+                  rolls</span>
+              {{else}}
+                <span>None</span>
+              {{/each}}
+            </div>
           </div>
-          {{! Displaying/Editing DR and Penalties arrays needs more advanced handling - maybe later }}
-          <p>Damage Reduction / Penalties editor coming soon...</p>
+          <div class='form-group'>
+            <label>Skill Penalties</label>
+            <div class='penalty-list readonly-list'>
+              {{#each systemData.skillPenalties as |pen id|}}
+                {{! Display each penalty entry }}
+                <span class='penalty-item'>-{{pen.penalty}}
+                  {{pen.skill}}
+                  rolls</span>
+              {{else}}
+                <span>None</span>
+              {{/each}}
+            </div>
+          </div>
+          {{! Add small note about editing arrays }}
+          <small
+            style='display: block; text-align: right; margin-top: -5px;'
+          >(Edit DR/Penalties via Console/Future UI)</small>
         </div>
       {{/if}}
       {{! End Armor Fields }}
+
+      {{! === Shield Fields === }}
+      {{#if (eq item.type 'shield')}}
+        <div class='shield-details item-details-section'>
+          <h3>Shield Details</h3>
+          <div class='grid grid-3col'>
+            <div class='form-group resource'>
+              <label>Shield HP</label>
+              <div class='resource-value flexrow'>
+                {{! Use similar styling as Actor HP }}
+                <input
+                  type='number'
+                  name='system.hp.value'
+                  value='{{systemData.hp.value}}'
+                  placeholder='Current'
+                  data-dtype='Number'
+                />
+                <span> / </span>
+                <input
+                  type='number'
+                  name='system.hp.max'
+                  value='{{systemData.hp.max}}'
+                  placeholder='Max'
+                  data-dtype='Number'
+                />
+              </div>
+            </div>
+            <div class='form-group'>
+              <label>Melee Defense Bonus</label>
+              <input
+                type='number'
+                name='system.defenseBonus'
+                value='{{systemData.defenseBonus}}'
+                data-dtype='Number'
+                placeholder='e.g., 1, 2, 3'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Menace Contribution</label>
+              <input
+                type='number'
+                name='system.menaceContribution'
+                value='{{systemData.menaceContribution}}'
+                data-dtype='Number'
+              />
+            </div>
+          </div>
+          {{! End grid }}
+
+          {{! Display complex array fields (Read-Only for now) }}
+          <div class='form-group'>
+            <label>Attribute Penalties</label>
+            <div class='penalty-list readonly-list'>
+              {{#each systemData.attributePenalties as |pen id|}}
+                <span class='penalty-item'>-{{pen.penalty}}
+                  {{pen.attribute}}
+                  rolls</span>
+              {{else}}
+                <span>None</span>
+              {{/each}}
+              {{! <small>(Edit via Console/Future UI)</small> }}
+            </div>
+          </div>
+
+          <div class='form-group'>
+            <label>Special Rules</label>
+            <textarea
+              name='system.special'
+              rows='2'
+              placeholder='Describe special rules like blocking ranged attacks...'
+            >{{systemData.special}}</textarea>
+          </div>
+        </div>
+      {{/if}}
+      {{! End Shield Fields }}
     </div>
     {{! End item-sheet-content }}
   </section>

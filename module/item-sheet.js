@@ -63,6 +63,13 @@ export class SurgeItemSheet extends ItemSheet {
       mystic: 'Mystic', // Added Mystic as an option based on earlier rules
       // Add any other relevant skills here
     };
+    context.armorTypes = {
+      '': '- Select -', // Blank default
+      light: 'Light',
+      medium: 'Medium',
+      heavy: 'Heavy',
+      // Add "vest" or other specific types if defined in template.json
+    };
 
     // We can add more data preparation here later if needed (e.g., config lookups)
     // context.config = CONFIG.SURGE;
