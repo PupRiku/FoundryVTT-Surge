@@ -104,6 +104,12 @@ export class SurgeCharacterSheet extends ActorSheet {
         finalKey = `${modKey}_${++i}`;
       }
 
+      console.log(
+        `SURGE DEBUG | _performRoll Loop: Processing mod=${JSON.stringify(
+          mod
+        )}, finalKey=${finalKey}, currentFormula=${formula}`
+      );
+
       // Use BACKTICKS and correct interpolation to add to formula
       formula += ` ${modSign} @${finalKey}`; // Use @key in formula string
       rollDataObject[finalKey] = modValue; // Add modifier value to data under the specific key
@@ -230,7 +236,7 @@ export class SurgeCharacterSheet extends ActorSheet {
    */
   async _onAttributeRoll(event) {
     event.preventDefault();
-    const element = event.currentTarget; // Should be the label: .attribute-block-label
+    const element = event.currentTarget;
     const attributeKey = element.dataset.attribute;
     const attribute = this.actor.system.attributes[attributeKey];
 
@@ -239,13 +245,12 @@ export class SurgeCharacterSheet extends ActorSheet {
       const isCtrl = event.ctrlKey || event.metaKey;
 
       if (attributeKey === 'dex' && isCtrl) {
-        // Ranged Defense
-        // console.log("SURGE | DEBUG | Calling _rollRangedDefense (mods built inside)");
+        // Ranged Defense (handles penalties internally)
         await this._rollRangedDefense();
       } else {
         // Basic Attribute Check
-        // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", []);
-        await this._performRoll(level, `${attribute.label} Check`, []); // <<< PASS EMPTY ARRAY HERE
+        let modifiers = this._getEquippedPenalties(attributeKey, null); // <<< Get penalties for this attribute
+        await this._performRoll(level, `${attribute.label} Check`, modifiers); // <<< Pass penalties
       }
     } else {
       console.error(
@@ -275,42 +280,73 @@ export class SurgeCharacterSheet extends ActorSheet {
       const isShift = event.shiftKey;
       const isCtrl = event.ctrlKey || event.metaKey;
 
+      // Determine primary attribute possibly affected by penalties related to this skill
+      // Example: Guile uses DEX penalties, Martial doesn't seem linked explicitly?
+      let primaryAttributeKey = null;
+      if (skillKey === 'guile' || skillKey === 'marksmanship')
+        primaryAttributeKey = 'dex'; // Apply DEX penalties to Guile? Check rules. Assume YES for now.
+      // if (skillKey === 'marksmanship') primaryAttributeKey = 'dex'; // Apply DEX penalties to Marksmanship? Assume YES.
+
+      // Get base penalties related to this skill AND its potential base attribute
+      let basePenalties = this._getEquippedPenalties(
+        primaryAttributeKey,
+        skillKey
+      );
+
       if (skillKey === 'martial') {
         if (isShift) {
           // Melee Weapon Attack
           const strLevel = actorAttributes.str?.value ?? 0;
-          const mods = [{ value: strLevel, label: 'STR Level' }];
-          // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", mods); // Optional log
+          // Combine penalties with attack bonus
+          let modifiers = [
+            ...basePenalties, // Add general penalties first (e.g. if shield penalizes martial?)
+            { value: strLevel, label: 'STR Level' },
+          ];
+          console.log(
+            `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
+            JSON.parse(JSON.stringify(basePenalties))
+          ); // Add this log
           await this._performRoll(
             level,
             `Melee Weapon Attack (${skill.label})`,
-            mods
-          ); // Pass mods array
+            modifiers
+          );
         } else if (isCtrl) {
-          // Melee Defense
-          // console.log("SURGE | DEBUG | Calling _rollMeleeDefense (mods built inside)"); // Optional log
+          // Melee Defense (handles penalties internally)
           await this._rollMeleeDefense();
         } else {
           // Basic Check
-          // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", []); // Optional log
-          await this._performRoll(level, `${skill.label} Check`, []); // <<< PASS EMPTY ARRAY HERE
+          console.log(
+            `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
+            JSON.parse(JSON.stringify(basePenalties))
+          ); // Add this log
+          await this._performRoll(level, `${skill.label} Check`, basePenalties); // Pass relevant penalties
         }
       } else if (skillKey === 'mystic') {
         if (isCtrl) {
-          // Magic Defense
-          // console.log("SURGE | DEBUG | Calling _rollMagicDefense (mods built inside)");
+          // Magic Defense (handles penalties internally)
           await this._rollMagicDefense();
-        }
-        // TODO: Handle Shift+Click for Mystic Attack?
-        else {
+        } else {
           // Basic Check
-          // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", []);
-          await this._performRoll(level, `${skill.label} Check`, []); // <<< PASS EMPTY ARRAY HERE
+          // Does INT penalty affect Mystic? Assume no for now unless rules state otherwise.
+          let mysticPenalties = this._getEquippedPenalties(null, skillKey); // Only check skill penalty
+          console.log(
+            `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
+            JSON.parse(JSON.stringify(basePenalties))
+          ); // Add this log
+          await this._performRoll(
+            level,
+            `${skill.label} Check`,
+            mysticPenalties
+          );
         }
       } else {
         // Other skill basic checks
-        // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", []);
-        await this._performRoll(level, `${skill.label} Check`, []); // <<< PASS EMPTY ARRAY HERE
+        console.log(
+          `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
+          JSON.parse(JSON.stringify(basePenalties))
+        ); // Add this log
+        await this._performRoll(level, `${skill.label} Check`, basePenalties); // Pass relevant penalties
       }
     } else {
       console.error(`SURGE | Could not find skill data for key: ${skillKey}`);
@@ -467,30 +503,39 @@ export class SurgeCharacterSheet extends ActorSheet {
     const element = event.currentTarget;
     const li = element.closest('.item');
     const itemId = li?.dataset?.itemId;
-    const item = this.actor.items.get(itemId); // This is the weapon item
+    const item = this.actor.items.get(itemId); // Weapon item
 
-    // Ensure it's a weapon
     if (!item || item.type !== 'weapon') return;
 
-    // Determine skill and level
-    const skillKey = item.system.skillUsed || 'martial'; // Default to martial if not specified? Or fetch from type?
+    const skillKey = item.system.skillUsed || 'martial';
     const skill = this.actor.system.skills[skillKey];
-    const skillLevel = skill?.value ?? 1; // Default to level 1 if skill somehow missing
+    const skillLevelOrDefault = skill?.value ?? 1;
 
-    // Determine label and modifiers
     let label = `${item.name} Attack (${skill?.label || skillKey})`;
-    let flatModifier = 0;
-    let modifierLabel = '';
+
+    // --- Get relevant penalties ---
+    // Check for penalties on the skill itself and the assumed base attribute
+    let primaryAttributeKey = null;
+    if (skillKey === 'marksmanship') primaryAttributeKey = 'dex'; // Marksmanship affected by DEX penalty? Assume YES.
+    // Martial attacks likely not affected by general DEX/Guile penalties? Assume NO for attack roll.
+
+    let basePenalties = this._getEquippedPenalties(
+      primaryAttributeKey,
+      skillKey
+    );
+    // --- End Penalties ---
 
     // Add STR Level bonus ONLY for Melee Weapon attacks using Martial skill
+    let attackBonus = [];
     if (item.system.weaponType === 'melee' && skillKey === 'martial') {
-      flatModifier = this.actor.system.attributes.str?.value ?? 0;
-      modifierLabel = 'STR Level';
+      const strLevel = this.actor.system.attributes.str?.value ?? 0;
+      attackBonus.push({ value: strLevel, label: 'STR Level' });
     }
-    // Add other potential modifiers later (e.g. from status effects, temporary bonuses)
 
-    // Perform the roll using the existing helper function
-    await this._performRoll(skillLevel, label, flatModifier, modifierLabel);
+    // Combine all modifiers
+    let finalModifiers = [...basePenalties, ...attackBonus];
+
+    await this._performRoll(skillLevelOrDefault, label, finalModifiers);
   }
 
   /**
@@ -579,6 +624,111 @@ export class SurgeCharacterSheet extends ActorSheet {
   }
 
   /**
+   * Finds equipped armor/shield and calculates relevant penalties for a roll.
+   * Penalties in template.json are positive numbers, returned here as negative values.
+   * @param {string|null} attributeKey The key of the attribute being rolled (e.g., "dex"), or null.
+   * @param {string|null} skillKey     The key of the skill being rolled (e.g., "guile"), or null.
+   * @returns {Array<{value: number, label: string}>} An array of modifier objects for penalties.
+   * @private
+   */
+  _getEquippedPenalties(attributeKey = null, skillKey = null) {
+    const equippedArmor = this._findEquippedItem('armor');
+    const equippedShield = this._findEquippedItem('shield');
+    const penalties = [];
+    let totalAttrPenalty = 0;
+    let totalSkillPenalty = 0;
+    let armorName = equippedArmor?.name || 'Armor';
+    let shieldName = equippedShield?.name || 'Shield';
+
+    // Check Armor penalties
+    if (equippedArmor) {
+      if (attributeKey) {
+        totalAttrPenalty +=
+          equippedArmor.system?.attributePenalties?.find(
+            (p) => p.attribute === attributeKey
+          )?.penalty ?? 0;
+      }
+      if (skillKey) {
+        totalSkillPenalty +=
+          equippedArmor.system?.skillPenalties?.find(
+            (p) => p.skill === skillKey
+          )?.penalty ?? 0;
+      }
+    }
+    // Check Shield penalties
+    if (equippedShield) {
+      if (attributeKey) {
+        totalAttrPenalty +=
+          equippedShield.system?.attributePenalties?.find(
+            (p) => p.attribute === attributeKey
+          )?.penalty ?? 0;
+      }
+      if (skillKey) {
+        totalSkillPenalty +=
+          equippedShield.system?.skillPenalties?.find(
+            (p) => p.skill === skillKey
+          )?.penalty ?? 0;
+      }
+    }
+
+    // Add to modifiers array if penalties exist (stored as positive, applied as negative)
+    if (totalAttrPenalty > 0) {
+      // Find which item(s) caused the penalty for a better label
+      let sources = [];
+      if (
+        (equippedArmor?.system?.attributePenalties?.find(
+          (p) => p.attribute === attributeKey
+        )?.penalty ?? 0) > 0
+      )
+        sources.push(armorName);
+      if (
+        (equippedShield?.system?.attributePenalties?.find(
+          (p) => p.attribute === attributeKey
+        )?.penalty ?? 0) > 0
+      )
+        sources.push(shieldName);
+      let label =
+        sources.length > 0
+          ? `${sources.join('/')} Penalty (${attributeKey.toUpperCase()})`
+          : `Item Penalty (${attributeKey.toUpperCase()})`;
+      penalties.push({ value: -totalAttrPenalty, label: label });
+    }
+    if (totalSkillPenalty > 0) {
+      let sources = [];
+      if (
+        (equippedArmor?.system?.skillPenalties?.find(
+          (p) => p.skill === skillKey
+        )?.penalty ?? 0) > 0
+      )
+        sources.push(armorName);
+      if (
+        (equippedShield?.system?.skillPenalties?.find(
+          (p) => p.skill === skillKey
+        )?.penalty ?? 0) > 0
+      )
+        sources.push(shieldName);
+      let label =
+        sources.length > 0
+          ? `${sources.join('/')} Penalty (${skillKey})`
+          : `Item Penalty (${skillKey})`;
+      penalties.push({ value: -totalSkillPenalty, label: label });
+    }
+
+    console.log(
+      `SURGE DEBUG | _getEquippedPenalties Input: attr='<span class="math-inline">\{attributeKey\}', skill\='</span>{skillKey}'`
+    );
+    console.log(
+      `SURGE DEBUG | _getEquippedPenalties Calculated: attrPenalty=<span class="math-inline">\{totalAttrPenalty\}, skillPenalty\=</span>{totalSkillPenalty}`
+    );
+    console.log(
+      `SURGE DEBUG | _getEquippedPenalties Returning:`,
+      JSON.parse(JSON.stringify(penalties))
+    ); // Deep copy for clean log
+
+    return penalties;
+  }
+
+  /**
    * Performs the roll for Melee Defense.
    * (Martial Combat Roll + STR Level + Shield Bonus)
    * @private
@@ -588,49 +738,25 @@ export class SurgeCharacterSheet extends ActorSheet {
     const attribute = this.actor.system.attributes.str;
     const skillLevel = skill?.value ?? 1;
     const strLevel = attribute?.value ?? 0;
-
-    // Find equipped items
     const equippedShield = this._findEquippedItem('shield');
-    const equippedArmor = this._findEquippedItem('armor'); // Check armor for penalties too
-
-    // Compile modifiers
-    const modifiers = [];
-    if (strLevel !== 0) modifiers.push({ value: strLevel, label: 'STR Level' });
-
-    // Add shield bonus vs melee
     const shieldBonus = equippedShield?.system?.defenseBonus ?? 0;
-    if (shieldBonus !== 0)
-      modifiers.push({
-        value: shieldBonus,
-        label: equippedShield?.name || 'Shield Bonus',
-      });
 
-    // Check armor/shield penalties affecting the roll (Martial skill or STR attribute)
-    const martialPenalty =
-      (equippedArmor?.system?.skillPenalties?.find((p) => p.skill === 'martial')
-        ?.penalty ?? 0) +
-      (equippedShield?.system?.skillPenalties?.find(
-        (p) => p.skill === 'martial'
-      )?.penalty ?? 0); // Shields unlikely to have skill penalties?
-    const strPenalty =
-      (equippedArmor?.system?.attributePenalties?.find(
-        (p) => p.attribute === 'str'
-      )?.penalty ?? 0) +
-      (equippedShield?.system?.attributePenalties?.find(
-        (p) => p.attribute === 'str'
-      )?.penalty ?? 0); // Shields might have STR penalties? Check rules.
+    // Get specific penalties for Martial skill and STR attribute
+    const penalties = this._getEquippedPenalties('str', 'martial');
 
-    if (martialPenalty !== 0)
-      modifiers.push({
-        value: -martialPenalty,
-        label: 'Item Penalty (Martial)',
-      }); // Penalties are positive in data, apply as negative mod
-    if (strPenalty !== 0)
-      modifiers.push({ value: -strPenalty, label: 'Item Penalty (STR)' });
+    const modifiers = [
+      // Start with penalties
+      ...penalties,
+      // Add base attribute bonus
+      { value: strLevel, label: 'STR Level' },
+      // Add shield bonus
+      { value: shieldBonus, label: equippedShield?.name || 'Shield Bonus' },
+    ];
+    // Filter out zero-value modifiers for cleaner logs/tooltips
+    const finalModifiers = modifiers.filter((m) => m.value !== 0);
 
     const label = `Melee Defense (${skill?.label || 'Martial'})`;
-    console.log(`SURGE | DEBUG | Modifiers Array from ${label}:`, modifiers);
-    await this._performRoll(skillLevel, label, modifiers);
+    await this._performRoll(skillLevel, label, finalModifiers);
   }
 
   /**
@@ -642,37 +768,15 @@ export class SurgeCharacterSheet extends ActorSheet {
     const attribute = this.actor.system.attributes.dex;
     const dexLevel = attribute?.value ?? 1;
 
-    // Find equipped items
-    const equippedArmor = this._findEquippedItem('armor');
-    const equippedShield = this._findEquippedItem('shield');
+    // Get specific penalties for DEX attribute roll
+    const penalties = this._getEquippedPenalties('dex', null);
 
-    // Compile modifiers (Penalties applied to DEX roll)
-    const modifiers = [];
-    const armorDexPenalty =
-      equippedArmor?.system?.attributePenalties?.find(
-        (p) => p.attribute === 'dex'
-      )?.penalty ?? 0;
-    const shieldDexPenalty =
-      equippedShield?.system?.attributePenalties?.find(
-        (p) => p.attribute === 'dex'
-      )?.penalty ?? 0;
-
-    if (armorDexPenalty !== 0)
-      modifiers.push({
-        value: -armorDexPenalty,
-        label: `${equippedArmor.name} Penalty (DEX)`,
-      });
-    if (shieldDexPenalty !== 0)
-      modifiers.push({
-        value: -shieldDexPenalty,
-        label: `${equippedShield.name} Penalty (DEX)`,
-      });
-    // Note: Assumes penalties stored as positive numbers. Apply as negative modifier.
+    // Filter out zero-value modifiers
+    const finalModifiers = penalties.filter((m) => m.value !== 0);
 
     // NOTE: Logic for blocking with shield using Melee Defense instead is NOT implemented here yet.
     const label = `Ranged Defense (${attribute?.label || 'Dexterity'})`;
-    console.log(`SURGE | DEBUG | Modifiers Array from ${label}:`, modifiers);
-    await this._performRoll(dexLevel, label, modifiers);
+    await this._performRoll(dexLevel, label, finalModifiers);
   }
 
   /**
@@ -686,13 +790,19 @@ export class SurgeCharacterSheet extends ActorSheet {
     const skillLevel = skill?.value ?? 1;
     const intLevel = attribute?.value ?? 0;
 
-    const modifiers = [];
-    if (intLevel !== 0) modifiers.push({ value: intLevel, label: 'INT Level' });
-    // TODO: Add logic later for bonuses from other effects/items if applicable
+    // Get specific penalties for Mystic skill and INT attribute
+    const penalties = this._getEquippedPenalties('int', 'mystic');
 
+    const modifiers = [
+      ...penalties, // Apply penalties first
+      { value: intLevel, label: 'INT Level' }, // Add base attribute bonus
+    ];
+    // Filter out zero-value modifiers
+    const finalModifiers = modifiers.filter((m) => m.value !== 0);
+
+    // NOTE: Logic for spell-specific defense rolls not yet implemented.
     const label = `Magic Defense (${skill?.label || 'Mystic'})`;
-    console.log(`SURGE | DEBUG | Modifiers Array from ${label}:`, modifiers);
-    await this._performRoll(skillLevel, label, modifiers);
+    await this._performRoll(skillLevel, label, finalModifiers);
   }
 
   // Define other event handler methods like _onItemAttack, etc.

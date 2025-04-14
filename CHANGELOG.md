@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.2] - 2025-04-14
+
+### ✨ Features
+
+- Implemented General Penalty Application from equipped items (Armor/Shields).
+- Penalties defined in `item.system.attributePenalties` and `item.system.skillPenalties` are now checked and applied automatically to relevant Attribute Checks, Skill Checks, Attack Rolls, and Defense Rolls.
+- Implemented Defense Bonuses from equipped Shields (`defenseBonus`) correctly in Melee Defense rolls.
+
+### 🔧 Maintenance
+
+- Added `_getEquippedPenalties` helper function to centralize penalty calculation.
+- Updated all roll handler methods (`_onAttributeRoll`, `_onSkillRoll`, `_onItemAttackRoll`) and dedicated defense methods (`_rollMeleeDefense`, `_rollRangedDefense`, `_rollMagicDefense`) to incorporate general penalties and specific defense bonuses.
+- Refactored `_performRoll` previously (in v0.4.1 dev) to accept an array of modifiers.
+
 ## [0.4.1] - 2025-04-14
 
 ### ✨ Features

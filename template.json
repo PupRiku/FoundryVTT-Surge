@@ -125,7 +125,7 @@
       "equipped": false,
       "menaceContribution": 0,
       "damageReduction": [],
-      "skillPenalties": [],
+      "skillPenalties": [{ "skill": "guile", "penalty": 3 }],
       "attributePenalties": [{ "attribute": "dex", "penalty": 1 }],
       "plateSlots": 0
     },
