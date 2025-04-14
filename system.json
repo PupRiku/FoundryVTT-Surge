@@ -19,7 +19,7 @@
   "styles": ["css/surge.css"],
   "url": "https://github.com/PupRiku/FoundryVTT-Surge",
   "manifest": "https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/main/system.json",
-  "download": "https://github.com/PupRiku/FoundryVTT-Surge/archive/refs/tags/v0.1.0.zip",
+  "download": "https://github.com/PupRiku/FoundryVTT-Surge/archive/refs/tags/v0.3.31.zip",
   "license": "LICENSE",
   "readme": "https://github.com/PupRiku/FoundryVTT-Surge/blob/main/README.md",
   "bugs": "https://github.com/PupRiku/FoundryVTT-Surge/issues",

@@ -19,7 +19,7 @@ This system is currently **under active development** (pre-release) and aims to 
 3.  Click the "Install System" button.
 4.  In the "Manifest URL" field at the bottom, paste the following URL for the latest pre-release (**v0.3.3**):
     ```
-    [https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.3.3/system.json](https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.3.3/system.json)
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.3.3/system.json
     ```
 5.  Click "Install".
 
@@ -33,7 +33,7 @@ Foundry will download and install the system. You can then create a new world us
   - **Header:** Displays Character Name (editable), Image (editable), styled Level block (right-aligned), and Passives Grid (HP, Recovery, Movement, Actions, En-Counter, Menace).
   - **Total Menace:** Automatically calculated in header based on Base Menace + `menaceContribution` from equipped items.
   - **Main Tab:** Displays Attributes (block style, editable, left column ~15%) and Skills (row style, editable, right column ~85%). Labels/blocks are rollable.
-  - **Inventory Tab:** Displays owned items categorized (Weapons, Armor/Shields, Gear/Equipment). Items show icon, name, basic info. Functional Edit (opens item sheet) and Delete (with confirmation) buttons. Equipped/Unequipped toggle icon (<i class="fas fa-shield-alt"></i>) functional for relevant items (updates data and appearance).
+  - **Inventory Tab:** Displays owned items categorized (Weapons, Armor/Shields, Gear/Equipment). Items show icon, name, basic info. Functional Edit (opens item sheet) and Delete (with confirmation) buttons. Equipped/Unequipped toggle icon `<i class="fas fa-shield-alt"></i>` functional for relevant items (updates data and appearance).
   - **Biography Tab:** Implemented layout with functional rich text editors (`{{editor}}`) for all biography fields (Appearance, Origin, Notes, etc.).
 - **Dice Rolling:**
   - Core SURGE! roll mechanic implemented (`Xd6x6+Y` lookup with `x6` SURGING).
