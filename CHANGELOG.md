@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.3] - 2025-04-13
+
+### ✨ Features
+
+- Implemented automatic calculation of Total Menace in `getData()`.
+- Total Menace now sums Base Menace and the `menaceContribution` from all equipped items (where applicable).
+- Value displayed in the header passives grid updates automatically when items are equipped/unequipped or base menace changes.
+- Added dynamic tooltip to Menace display showing Base + Equip = Total breakdown.
+
 ## [0.3.2] - 2025-04-13
 
 ### ✨ Features

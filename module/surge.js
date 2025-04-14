@@ -124,53 +124,51 @@ export class SurgeCharacterSheet extends ActorSheet {
    * @override
    */
   async getData(options) {
-    // Get the base data context object from the parent class (ActorSheet)
     const context = await super.getData(options);
-
-    // Make the actor's system data easily accessible in the template
-    // 'system' will contain everything defined in your template.json for the character
     context.systemData = context.actor.system;
 
-    // --- Add calculated data here ---
-
-    // Calculate Max Actions based on Dexterity Level (rounding down)
-    const dexLevel = context.systemData.attributes?.dex?.value ?? 1; // Safely get DEX level, default to 1 if not found
-    // We'll store the calculated actions info directly in the context for the template
+    // --- Calculate Max Actions ---
+    const dexLevel = context.systemData.attributes?.dex?.value ?? 1;
     context.calculatedActions = {
       max: Math.floor(dexLevel / 2) + 2,
       label: 'Actions per Turn',
-      // We might add 'value' later for tracking current actions within a turn
     };
 
-    // Calculate Max HP (incorporating Base HP and En-Counter)
-    // Note: Initial HP calculation based on STR roll at creation is not handled here yet.
-    // This calculates the *current* maximum based on ongoing progression.
+    // --- Calculate Max HP ---
     const baseHp = context.systemData.passives?.hp?.base ?? 0;
     const encounter = context.systemData.passives?.encounter?.value ?? 0;
-
-    // TODO: Need to factor in the initial bonus HP from the Level 1 STR roll.
-    // For now, let's assume a 'startingMaxHp' field exists or calculate a simple max.
-    // We'll just calculate the dynamic part for now. A 'getter' might be better later.
     const startingMaxHp =
-      context.systemData.passives?.hp?.startingMax ?? baseHp; // Assume startingMax exists or fallback to base
+      context.systemData.passives?.hp?.startingMax ?? baseHp;
     context.systemData.passives.hp.max = startingMaxHp + encounter;
-    // Ensure current HP doesn't exceed the calculated max
     context.systemData.passives.hp.value = Math.min(
       context.systemData.passives.hp.value,
       context.systemData.passives.hp.max
     );
 
-    // Calculate Total Menace (Placeholder - needs logic for equipped items)
-    const baseMenace = context.systemData.passives?.menace?.base ?? 0;
-    // TODO: Get menace contribution from equipped armor and weapons
-    const equipmentMenace = 0; // Placeholder value
-    // Add a 'total' value for easy display on the sheet
-    context.systemData.passives.menace.total = baseMenace + equipmentMenace;
+    // --- Calculate Total Menace ---
+    const baseMenace = Number(context.systemData.passives?.menace?.base ?? 0);
+    let equipmentMenace = 0;
 
-    // Log the prepared data for debugging purposes
+    // Loop through all owned items to find equipped contributors
+    for (const item of this.actor.items) {
+      // Check if item is equipped AND has a numeric menaceContribution
+      if (
+        item.system?.equipped === true &&
+        typeof item.system?.menaceContribution === 'number'
+      ) {
+        equipmentMenace += item.system.menaceContribution;
+      }
+    }
+
+    // Calculate total and add it to the context for the template
+    const totalMenace = baseMenace + equipmentMenace;
+    context.systemData.passives.menace.total = totalMenace;
+
+    // Create a helpful tooltip string (optional but nice)
+    context.systemData.passives.menace.tooltip = `Base: ${baseMenace} + Equip: ${equipmentMenace} = Total: ${totalMenace}`;
+    // --- End of Menace Calculation ---
+
     console.log('SURGE! | Character Sheet Data Context:', context);
-
-    // Return the context object which Handlebars will use to render the sheet
     return context;
   }
 

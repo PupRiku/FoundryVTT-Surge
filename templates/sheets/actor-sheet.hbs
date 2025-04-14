@@ -97,9 +97,9 @@
       <div class='passive-grid-item menace'>
         <label title='{{systemData.passives.menace.label}}'>Menace</label>
         <span
-          class='passive-value'
-          title='Base: {{systemData.passives.menace.base}} (Total = Base + Equip)'
-        >{{systemData.passives.menace.total}}</span>
+          class="passive-value"
+          title="{{systemData.passives.menace.tooltip}}"
+        >{{systemData.passives.menace.total}}</span> {{!-- Use dynamic tooltip --}}
       </div>
     </div>
     {{! End header-passives-grid }}

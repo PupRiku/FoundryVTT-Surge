@@ -127,7 +127,7 @@
         "type": "physical",
         "source": "melee"
       },
-      "menaceContribution": 0
+      "menaceContribution": 1
     },
     "shield": {
       "description": "",

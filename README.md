@@ -17,37 +17,36 @@ This system is currently **under active development** (pre-release) and aims to 
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field at the bottom, paste the following URL for the latest pre-release (**v0.3.1**):
+4.  In the "Manifest URL" field at the bottom, paste the following URL for the latest pre-release (**v0.3.3**):
     ```
-    [https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.3.1/system.json](https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.3.1/system.json)
+    [https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.3.3/system.json](https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.3.3/system.json)
     ```
 5.  Click "Install".
 
 Foundry will download and install the system. You can then create a new world using the SURGE! system.
 
-## Current Features (as of v0.3.1)
+## Current Features (as of v0.3.3)
 
-- **Basic System Structure:** `system.json` manifest, `template.json` data models (Character, basic Item types).
+- **Basic System Structure:** `system.json` manifest, `template.json` data models (Character, Item types including Weapon, Armor, Shield, Gear, etc.).
 - **Character Sheet:**
-  - Functional sheet window opens.
-  - **Header:** Displays Character Name (editable), Image (editable), styled Level block, and Passives Grid (HP, Recovery, Movement, Actions, En-Counter, Menace).
-  - **Main Tab:** Displays Attributes (block style, editable) and Skills (row style, editable) in a two-column layout.
-  - **Inventory Tab:** Displays owned items categorized by type (Weapons, Armor/Shields, Gear/Equipment) with icon, name, basic info, and functional Edit/Delete buttons.
-  - **Biography Tab:** Displays editable text boxes with suggested categories.
+  - Functional sheet window opens with initial CSS styling.
+  - **Header:** Displays Character Name (editable), Image (editable), styled Level block (right-aligned), and Passives Grid (HP, Recovery, Movement, Actions, En-Counter, Menace).
+  - **Total Menace:** Automatically calculated in header based on Base Menace + `menaceContribution` from equipped items.
+  - **Main Tab:** Displays Attributes (block style, editable, left column ~15%) and Skills (row style, editable, right column ~85%). Labels/blocks are rollable.
+  - **Inventory Tab:** Displays owned items categorized (Weapons, Armor/Shields, Gear/Equipment). Items show icon, name, basic info. Functional Edit (opens item sheet) and Delete (with confirmation) buttons. Equipped/Unequipped toggle icon (<i class="fas fa-shield-alt"></i>) functional for relevant items (updates data and appearance).
+  - **Biography Tab:** Implemented layout with functional rich text editors (`{{editor}}`) for all biography fields (Appearance, Origin, Notes, etc.).
 - **Dice Rolling:**
-  - Core SURGE! roll mechanic implemented (`Xd6x6+Y` based on level lookup).
-  - Clicking Attribute labels/blocks or Skill labels triggers base checks.
-  - **Modified Rolls:** Shift+Click / Ctrl+Click on certain skill labels trigger modified rolls (Melee Weapon Attack, Melee Defense, Magic Defense) correctly adding flat bonuses (+STR Level, +INT Level).
-  - Roll results sent to chat with appropriate labels and working formula tooltips.
-- **Basic Styling:** Initial CSS applied for header layout, main tab columns, attribute blocks, skill rows, passives grid, and inventory lists.
+  - Core SURGE! roll mechanic implemented (`Xd6x6+Y` lookup with `x6` SURGING).
+  - Basic Attribute/Skill checks rollable from sheet labels/blocks.
+  - **Modified Rolls:** Shift+Click / Ctrl+Click on relevant skill labels trigger modified rolls (Melee Weapon Attack, Melee Defense, Magic Defense) correctly adding flat bonuses (+STR Level, +INT Level) and sending results to chat.
+- **Item Management:** Edit, Delete, and Equip/Unequip functionality working on Inventory tab items via clickable controls.
 
 ## Planned / To-Do Features
 
 - Combat Rolls triggered from Weapon items (Attack & Damage).
 - Implementation of Shield/Armor bonuses in defense rolls.
-- Calculation of Total Menace based on equipped items.
 - Status Effect / Condition tracking and application (e.g., from weapon specialties).
-- Spellcasting implementation (if applicable).
+- Spellcasting implementation.
 - NPC sheet design.
 - Compendium packs for base items, species, traits, etc.
 - Further styling and polish.
@@ -59,4 +58,4 @@ Please report any bugs or provide feedback by opening an issue on the [GitHub Is
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE) (assuming you chose MIT).
+This project is licensed under the [MIT License](LICENSE).
