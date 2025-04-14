@@ -91,6 +91,7 @@
       }
     },
     "weapon": {
+      "equipped": false,
       "description": "",
       "quantity": 1,
       "weight": 0,
@@ -114,6 +115,7 @@
       "ammoType": ""
     },
     "armor": {
+      "equipped": false,
       "description": "",
       "quantity": 1,
       "weight": 0,
@@ -125,6 +127,16 @@
         "type": "physical",
         "source": "melee"
       },
+      "menaceContribution": 0
+    },
+    "shield": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "crafting": { "skill": "", "dr": "", "materials": "" },
+      "equipped": false,
+      "defenseBonus": 1,
       "menaceContribution": 0
     },
     "ammunition": {

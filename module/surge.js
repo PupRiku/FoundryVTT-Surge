@@ -194,6 +194,9 @@ export class SurgeCharacterSheet extends ActorSheet {
     // --- Item Control Listeners ---
     html.find('.item-edit').click(this._onItemEdit.bind(this));
     html.find('.item-delete').click(this._onItemDelete.bind(this));
+    html
+      .find('.item-toggle-equip')
+      .click(this._onItemToggleEquipped.bind(this));
 
     // Add more listeners later (e.g., roll damage from item)
   }
@@ -378,6 +381,58 @@ export class SurgeCharacterSheet extends ActorSheet {
       },
       defaultYes: false, // Make the "No" button the default action
     });
+  }
+
+  /**
+   * Handle toggling the equipped state of an item.
+   * @param {Event} event   The triggering click event.
+   * @private
+   */
+  async _onItemToggleEquipped(event) {
+    event.preventDefault();
+    const element = event.currentTarget; // The clicked <a> tag
+    const li = element.closest('.item');
+    const itemId = li?.dataset?.itemId;
+
+    if (!itemId) {
+      console.error('SURGE | Could not find item ID for equip toggle.');
+      return;
+    }
+    const item = this.actor.items.get(itemId);
+    if (!item) {
+      console.warn(
+        `SURGE | Equip toggle clicked for non-existent item ID: ${itemId}`
+      );
+      return;
+    }
+
+    // Check if the 'equipped' property exists in the item's system data
+    if (typeof item.system.equipped === 'undefined') {
+      console.warn(
+        `SURGE | Item ${item.name} does not have an 'equipped' property.`
+      );
+      ui.notifications.warn(
+        `Item "${item.name}" cannot be equipped/unequipped.`
+      );
+      return;
+    }
+
+    // Toggle the equipped state by updating the item document
+    const currentEquippedState = item.system.equipped;
+    console.log(
+      `SURGE | Toggling equipped state for ${
+        item.name
+      } from ${currentEquippedState} to ${!currentEquippedState}`
+    );
+    try {
+      await item.update({ 'system.equipped': !currentEquippedState });
+      // Sheet should re-render automatically via Foundry's hooks on item update
+    } catch (err) {
+      console.error('SURGE | Failed to update item equipped state:', err);
+      ui.notifications.error(
+        `Failed to update equipped state for ${item.name}.`
+      );
+    }
   }
   // Define other event handler methods like _onItemAttack, etc.
   // Remember to use async for functions that perform rolls or update the actor.

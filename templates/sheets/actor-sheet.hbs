@@ -195,8 +195,12 @@
                   height='24'
                 />
                 <h4 class='item-name'>{{item.name}}</h4>
-                {{! Add controls - they won't work yet }}
+                {{! Add controls }}
                 <div class='item-controls'>
+                  <a class="item-control item-toggle-equip {{#if system.equipped}}active{{/if}}"
+                    title="{{#if system.equipped}}Equipped (Click to Unequip){{else}}Unequipped (Click to Equip){{/if}}">
+                    <i class="fas fa-shield-alt"></i>
+                  </a>
                   <a class='item-control item-edit' title='Edit Item'><i
                       class='fas fa-edit'
                     ></i></a>
@@ -231,6 +235,10 @@
                 <span class='item-info'>Qty: {{item.system.quantity}}</span>
                 <span class='item-info'>Wt: {{item.system.weight}}</span>
                 <div class='item-controls'>
+                  <a class="item-control item-toggle-equip {{#if system.equipped}}active{{/if}}" 
+                    title="{{#if system.equipped}}Equipped (Click to Unequip){{else}}Unequipped (Click to Equip){{/if}}">
+                    <i class="fas fa-shield-alt"></i>
+                  </a>
                   <a class='item-control item-edit' title='Edit Item'><i
                       class='fas fa-edit'
                     ></i></a>

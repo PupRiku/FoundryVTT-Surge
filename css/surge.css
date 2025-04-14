@@ -516,6 +516,26 @@
   color: #3080dd; /* Example hover color for edit */
 }
 
+/* === Item Equip Toggle Styling === */
+.surge .item-list .item .item-controls a.item-toggle-equip {
+  color: #a5a5a5; /* Dimmed/grey when not equipped */
+  text-align: center;
+  width: 20px; /* Give it consistent space */
+  font-size: 0.9em; /* Slightly smaller icon maybe */
+}
+.surge .item-list .item .item-controls a.item-toggle-equip.active {
+  color: #3fb93f; /* Green when active/equipped */
+  text-shadow: 0 0 3px #aaf0aa;
+}
+.surge .item-list .item .item-controls a.item-toggle-equip:hover {
+  color: #888;
+  text-shadow: 0 0 5px #ccc;
+}
+.surge .item-list .item .item-controls a.item-toggle-equip.active:hover {
+  color: #2e8a2e;
+  text-shadow: 0 0 5px #8fec8f;
+}
+
 /* === Biography Tab Styles === */
 .surge .tab.description .biography-content {
   padding: 5px; /* Add padding around the whole bio section */
