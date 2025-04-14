@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.1] - 2025-04-14
+
+### ✨ Features
+
+- Implemented Defense Bonuses/Penalties from equipped items:
+  - Melee Defense rolls now include Shield `defenseBonus` and check for STR/Martial penalties.
+  - Ranged Defense rolls now include DEX penalties from equipped Armor/Shields.
+- Refactored defense roll logic into separate helper methods.
+
+### 🔧 Maintenance
+
+- Updated `template.json` for `armor` and `shield` types to support Damage Reduction arrays, Skill/Attribute Penalty arrays, Shield HP, and Shield Melee Defense Bonus. Removed placeholder `rangedDefenseBonus`.
+  - Added placeholder default values to test penalties and DR.
+- Added basic `plate` item type to `template.json`.
+- Refactored `_performRoll` to accept an array of modifiers.
+
 ## [0.4.0] - 2025-04-14
 
 ### ✨ Features

@@ -55,19 +55,18 @@ export class SurgeCharacterSheet extends ActorSheet {
   };
 
   /**
-   * Performs a SURGE! system roll based on a stat level and optional modifiers.
+   * Performs a SURGE! system roll based on a stat level and optional modifiers array.
    * Includes the 'x6' exploding dice rule.
-   * @param {number} level              The attribute or skill level (1-20).
-   * @param {string} label              The label for the roll (e.g., "Strength Check", "Guile Check").
-   * @param {number} [flatModifier=0]   Optional flat bonus/penalty added AFTER dice (e.g., STR level).
-   * @param {string} [modifierLabel=""] Optional label for the flat modifier (e.g., "STR Level").
-   * @returns {Promise<void>}           Sends the result to chat.
+   * @param {number} level                The attribute or skill level (1-20).
+   * @param {string} label                The label for the roll (e.g., "Strength Check").
+   * @param {Array<{value: number, label: string}>} [modifiers=[]] Optional array of modifier objects.
+   * @returns {Promise<void>}             Sends the result to chat.
    * @private
    */
-  async _performRoll(level, label, flatModifier = 0, modifierLabel = '') {
+  async _performRoll(level, label, modifiers = []) {
+    // <<< ACCEPTS MODIFIERS ARRAY
     level = Math.max(1, Math.min(20, level || 1)); // Ensure level is 1-20
     const rollData = this._rollTable[level];
-
     if (!rollData) {
       console.error(`SURGE | Invalid level for roll table lookup: ${level}`);
       ui.notifications.error(`Invalid level (${level}) for ${label}.`);
@@ -81,38 +80,58 @@ export class SurgeCharacterSheet extends ActorSheet {
     }
 
     // Prepare data object for the Roll class, including actor data
-    let rollDataObject = { ...this.actor.getRollData() }; // Include actor data like @attributes.str.value etc.
+    let rollDataObject = { ...this.actor.getRollData() };
+    let modifierDesc = []; // For logging/tooltip later if needed
 
-    // Add flat modifier to formula and data object if present
-    if (flatModifier !== 0) {
-      const modSign = flatModifier > 0 ? '+' : ''; // Keep sign for negatives
-      // Create a simple key like 'strLevel' or 'mod' from the label for the data object
+    // --- Loop through the modifiers array --- THIS IS THE KEY PART ---
+    for (const mod of modifiers) {
+      // Ensure mod value is a valid number and non-zero
+      if (typeof mod.value !== 'number' || mod.value === 0) continue;
+
+      const modValue = mod.value;
+      const modLabel = mod.label || 'Modifier'; // Default label if missing
+      const modSign = modValue > 0 ? '+' : ''; // Keep sign for negative mods
+      // Create a simple, unique key like 'strlevel' or 'mod_<random>' for the data object
       const modKey =
-        modifierLabel.toLowerCase().replace(/[^a-z0-9]/g, '') || 'modifier';
-      formula += ` ${modSign} @${modKey}`;
-      rollDataObject[modKey] = flatModifier; // Add modifier value to data
+        modLabel.toLowerCase().replace(/[^a-z0-9]/g, '') ||
+        `mod${foundry.utils.randomID(4)}`;
+      // Ensure key is unique if label is generic or contains invalid chars after cleanup
+      let finalKey = modKey;
+      if (!finalKey) finalKey = `mod${foundry.utils.randomID(4)}`; // Ensure key is never empty
+      let i = 0;
+      while (finalKey in rollDataObject) {
+        // Prevent key collisions in data object
+        finalKey = `${modKey}_${++i}`;
+      }
+
+      // Use BACKTICKS and correct interpolation to add to formula
+      formula += ` ${modSign} @${finalKey}`; // Use @key in formula string
+      rollDataObject[finalKey] = modValue; // Add modifier value to data under the specific key
+      modifierDesc.push(`${modLabel}: ${modSign}${modValue}`); // Keep track for logging/display
     }
+    // --- End of loop ---
 
     console.log(
-      `SURGE | Rolling - Level: ${level}, Formula: ${formula}, Data:`,
+      `SURGE | Rolling - Level: <span class="math-inline">\{level\}, Modifiers\: \[</span>{modifierDesc.join(', ')}], Formula: ${formula}, Data:`,
       rollDataObject,
       `Label: ${label}`
     );
 
-    // Create and evaluate the roll using Foundry's Roll class
+    // Create and evaluate the roll
     const roll = new Roll(formula, rollDataObject);
     try {
-      // Evaluate the roll asynchronously
-      await roll.evaluate();
+      await roll.evaluate(); // Evaluate asynchronously
 
-      // Send the result to the chat, using the provided label
+      // Send the result to the chat
       await roll.toMessage({
         speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        flavor: label, // e.g., "Strength Check"
-        // Add flags if needed later: flags: { surge: { level: level } }
+        flavor: label,
       });
     } catch (err) {
-      console.error('SURGE | Roll evaluation failed:', err);
+      console.error(
+        `SURGE | Roll evaluation failed for formula "${formula}":`,
+        err
+      );
       ui.notifications.error(`Failed to evaluate roll for ${label}.`);
     }
   }
@@ -204,22 +223,30 @@ export class SurgeCharacterSheet extends ActorSheet {
   }
 
   /**
-   * Example placeholder handler for rolling an attribute check.
-   * @param {Event} event The triggering event.
+   * Handle clicking on an attribute label/block to roll it.
+   * Checks for Ctrl key for Ranged Defense on Dexterity.
+   * @param {Event} event The triggering click event.
    * @private
    */
   async _onAttributeRoll(event) {
     event.preventDefault();
-    const element = event.currentTarget;
-    const attributeKey = element.dataset.attribute; // Expect 'data-attribute="str"' on the HTML element
+    const element = event.currentTarget; // Should be the label: .attribute-block-label
+    const attributeKey = element.dataset.attribute;
     const attribute = this.actor.system.attributes[attributeKey];
 
     if (attribute) {
-      const label = `${attribute.label} Check`; // e.g., "Strength Check"
       const level = attribute.value;
-      // Perform the basic roll using the attribute level
-      // We are NOT adding STR level or other bonuses here yet
-      await this._performRoll(level, label);
+      const isCtrl = event.ctrlKey || event.metaKey;
+
+      if (attributeKey === 'dex' && isCtrl) {
+        // Ranged Defense
+        // console.log("SURGE | DEBUG | Calling _rollRangedDefense (mods built inside)");
+        await this._rollRangedDefense();
+      } else {
+        // Basic Attribute Check
+        // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", []);
+        await this._performRoll(level, `${attribute.label} Check`, []); // <<< PASS EMPTY ARRAY HERE
+      }
     } else {
       console.error(
         `SURGE | Could not find attribute data for key: ${attributeKey}`
@@ -239,60 +266,52 @@ export class SurgeCharacterSheet extends ActorSheet {
   async _onSkillRoll(event) {
     event.preventDefault();
     const element = event.currentTarget;
-    const skillKey = element.dataset.skill; // data-skill="clerical" etc.
+    const skillKey = element.dataset.skill;
     const skill = this.actor.system.skills[skillKey];
-    const actorAttributes = this.actor.system.attributes; // Get attributes object
+    const actorAttributes = this.actor.system.attributes;
 
     if (skill) {
       const level = skill.value;
-      let label = `${skill.label} Check`; // Default: "Martial Combat Check"
-      let flatModifier = 0;
-      let modifierLabel = '';
-
-      // --- Check for Modifier Keys and specific skills ---
       const isShift = event.shiftKey;
-      const isCtrl = event.ctrlKey || event.metaKey; // Use Ctrl (or Cmd on Mac)
+      const isCtrl = event.ctrlKey || event.metaKey;
 
-      // --- Variations for Martial Combat ---
       if (skillKey === 'martial') {
-        const strLevel = actorAttributes.str?.value ?? 0; // Get STR Level safely
-
         if (isShift) {
-          // Shift + Click = Melee Weapon Attack Roll
-          label = `Melee Weapon Attack (${skill.label})`;
-          flatModifier = strLevel; // Add STR Level value
-          modifierLabel = 'STR Level'; // Label for the modifier in roll formula/tooltip
-          // Note: We assume any Shift+Click is a WEAPON attack for now.
-          //       Unarmed attack (no STR bonus) would just be a normal click.
+          // Melee Weapon Attack
+          const strLevel = actorAttributes.str?.value ?? 0;
+          const mods = [{ value: strLevel, label: 'STR Level' }];
+          // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", mods); // Optional log
+          await this._performRoll(
+            level,
+            `Melee Weapon Attack (${skill.label})`,
+            mods
+          ); // Pass mods array
         } else if (isCtrl) {
-          // Ctrl + Click = Melee Defense Roll
-          label = `Melee Defense (${skill.label})`;
-          flatModifier = strLevel; // Add STR Level value
-          modifierLabel = 'STR Level'; // Label for the modifier
-          // TODO: Add logic here later to find equipped shield bonus and add it too
-          // TODO: flatModifier += shieldBonus;
+          // Melee Defense
+          // console.log("SURGE | DEBUG | Calling _rollMeleeDefense (mods built inside)"); // Optional log
+          await this._rollMeleeDefense();
+        } else {
+          // Basic Check
+          // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", []); // Optional log
+          await this._performRoll(level, `${skill.label} Check`, []); // <<< PASS EMPTY ARRAY HERE
         }
-        // Else (no modifier key): Basic Martial Combat check (uses default label/mods)
-      } // --- Variations for Mystic ---
-      else if (skillKey === 'mystic') {
-        const intLevel = actorAttributes.int?.value ?? 0; // Get INT Level safely
-
+      } else if (skillKey === 'mystic') {
         if (isCtrl) {
-          // Ctrl + Click = Magic Defense Roll (example)
-          label = `Magic Defense (${skill.label})`;
-          flatModifier = intLevel; // Add INT Level value
-          modifierLabel = 'INT Level'; // Label for the modifie
+          // Magic Defense
+          // console.log("SURGE | DEBUG | Calling _rollMagicDefense (mods built inside)");
+          await this._rollMagicDefense();
         }
-        // Else (no modifier key / Shift): Basic Mystic check (or maybe Shift for attack?)
-        // TODO: Add logic for Mystic Attack rolls if needed
+        // TODO: Handle Shift+Click for Mystic Attack?
+        else {
+          // Basic Check
+          // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", []);
+          await this._performRoll(level, `${skill.label} Check`, []); // <<< PASS EMPTY ARRAY HERE
+        }
+      } else {
+        // Other skill basic checks
+        // console.log("SURGE | DEBUG | Modifiers Array PASSED to _performRoll:", []);
+        await this._performRoll(level, `${skill.label} Check`, []); // <<< PASS EMPTY ARRAY HERE
       }
-      // --- Variations for Dexterity (using _onAttributeRoll might be better) ---
-      // Note: Ranged Defense uses Dexterity Attribute, not a skill.
-      // We would modify _onAttributeRoll similarly if triggering from attribute label.
-      // else if (attributeKey === "dex" && isCtrl) { ... } in _onAttributeRoll
-
-      // Perform the roll using the (potentially modified) parameters
-      await this._performRoll(level, label, flatModifier, modifierLabel);
     } else {
       console.error(`SURGE | Could not find skill data for key: ${skillKey}`);
       ui.notifications.warn(`Skill data not found for key: ${skillKey}`);
@@ -545,6 +564,135 @@ export class SurgeCharacterSheet extends ActorSheet {
       );
       ui.notifications.error(`Failed to evaluate damage roll for ${label}.`);
     }
+  }
+
+  /**
+   * Helper to find the first equipped item of a specific type.
+   * @param {string} type The item type (e.g., "shield", "armor").
+   * @returns {Item|null} The found item document or null.
+   * @private
+   */
+  _findEquippedItem(type) {
+    return this.actor.items.find(
+      (item) => item.type === type && item.system?.equipped === true
+    );
+  }
+
+  /**
+   * Performs the roll for Melee Defense.
+   * (Martial Combat Roll + STR Level + Shield Bonus)
+   * @private
+   */
+  async _rollMeleeDefense() {
+    const skill = this.actor.system.skills.martial;
+    const attribute = this.actor.system.attributes.str;
+    const skillLevel = skill?.value ?? 1;
+    const strLevel = attribute?.value ?? 0;
+
+    // Find equipped items
+    const equippedShield = this._findEquippedItem('shield');
+    const equippedArmor = this._findEquippedItem('armor'); // Check armor for penalties too
+
+    // Compile modifiers
+    const modifiers = [];
+    if (strLevel !== 0) modifiers.push({ value: strLevel, label: 'STR Level' });
+
+    // Add shield bonus vs melee
+    const shieldBonus = equippedShield?.system?.defenseBonus ?? 0;
+    if (shieldBonus !== 0)
+      modifiers.push({
+        value: shieldBonus,
+        label: equippedShield?.name || 'Shield Bonus',
+      });
+
+    // Check armor/shield penalties affecting the roll (Martial skill or STR attribute)
+    const martialPenalty =
+      (equippedArmor?.system?.skillPenalties?.find((p) => p.skill === 'martial')
+        ?.penalty ?? 0) +
+      (equippedShield?.system?.skillPenalties?.find(
+        (p) => p.skill === 'martial'
+      )?.penalty ?? 0); // Shields unlikely to have skill penalties?
+    const strPenalty =
+      (equippedArmor?.system?.attributePenalties?.find(
+        (p) => p.attribute === 'str'
+      )?.penalty ?? 0) +
+      (equippedShield?.system?.attributePenalties?.find(
+        (p) => p.attribute === 'str'
+      )?.penalty ?? 0); // Shields might have STR penalties? Check rules.
+
+    if (martialPenalty !== 0)
+      modifiers.push({
+        value: -martialPenalty,
+        label: 'Item Penalty (Martial)',
+      }); // Penalties are positive in data, apply as negative mod
+    if (strPenalty !== 0)
+      modifiers.push({ value: -strPenalty, label: 'Item Penalty (STR)' });
+
+    const label = `Melee Defense (${skill?.label || 'Martial'})`;
+    console.log(`SURGE | DEBUG | Modifiers Array from ${label}:`, modifiers);
+    await this._performRoll(skillLevel, label, modifiers);
+  }
+
+  /**
+   * Performs the roll for Ranged Defense.
+   * (Dexterity Roll + Armor Bonus)
+   * @private
+   */
+  async _rollRangedDefense() {
+    const attribute = this.actor.system.attributes.dex;
+    const dexLevel = attribute?.value ?? 1;
+
+    // Find equipped items
+    const equippedArmor = this._findEquippedItem('armor');
+    const equippedShield = this._findEquippedItem('shield');
+
+    // Compile modifiers (Penalties applied to DEX roll)
+    const modifiers = [];
+    const armorDexPenalty =
+      equippedArmor?.system?.attributePenalties?.find(
+        (p) => p.attribute === 'dex'
+      )?.penalty ?? 0;
+    const shieldDexPenalty =
+      equippedShield?.system?.attributePenalties?.find(
+        (p) => p.attribute === 'dex'
+      )?.penalty ?? 0;
+
+    if (armorDexPenalty !== 0)
+      modifiers.push({
+        value: -armorDexPenalty,
+        label: `${equippedArmor.name} Penalty (DEX)`,
+      });
+    if (shieldDexPenalty !== 0)
+      modifiers.push({
+        value: -shieldDexPenalty,
+        label: `${equippedShield.name} Penalty (DEX)`,
+      });
+    // Note: Assumes penalties stored as positive numbers. Apply as negative modifier.
+
+    // NOTE: Logic for blocking with shield using Melee Defense instead is NOT implemented here yet.
+    const label = `Ranged Defense (${attribute?.label || 'Dexterity'})`;
+    console.log(`SURGE | DEBUG | Modifiers Array from ${label}:`, modifiers);
+    await this._performRoll(dexLevel, label, modifiers);
+  }
+
+  /**
+   * Performs the roll for Magic Defense.
+   * (Mystic Roll + INT Level) - Can be overridden by specific spells later.
+   * @private
+   */
+  async _rollMagicDefense() {
+    const skill = this.actor.system.skills.mystic;
+    const attribute = this.actor.system.attributes.int;
+    const skillLevel = skill?.value ?? 1;
+    const intLevel = attribute?.value ?? 0;
+
+    const modifiers = [];
+    if (intLevel !== 0) modifiers.push({ value: intLevel, label: 'INT Level' });
+    // TODO: Add logic later for bonuses from other effects/items if applicable
+
+    const label = `Magic Defense (${skill?.label || 'Mystic'})`;
+    console.log(`SURGE | DEBUG | Modifiers Array from ${label}:`, modifiers);
+    await this._performRoll(skillLevel, label, modifiers);
   }
 
   // Define other event handler methods like _onItemAttack, etc.
