@@ -7,6 +7,12 @@
 - Implemented Biography tab layout using Foundry's `{{editor}}` helper.
 - Added fields for Appearance, Origin, Involvement, Motivation, Aspirations, Allies/Enemies, and Notes.
 - Added basic CSS for Biography section spacing.
+- Implemented Equipped/Unequipped state toggle for Weapons, Armor, and Shields in the Inventory tab.
+- Added `equipped` boolean field to relevant item types in `template.json`.
+- Added a shield icon toggle (<i class="fas fa-shield-alt"></i>) to item rows in inventory display (`actor-sheet.hbs`).
+- Added JavaScript listener and handler (`_onItemToggleEquipped`) to update item equipped state on click.
+- Added basic CSS to style the equipped toggle icon (dimmed when unequipped, green when equipped).
+- Added basic `shield` item type to `template.json`
 
 ## [0.3.1] - 2025-04-13
 
