@@ -1,3 +1,5 @@
+import { SurgeItemSheet } from './item-sheet.js';
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
