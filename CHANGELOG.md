@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2] - 2025-04-13
+
+### ✨ Features
+
+- Implemented Biography tab layout using Foundry's `{{editor}}` helper.
+- Added fields for Appearance, Origin, Involvement, Motivation, Aspirations, Allies/Enemies, and Notes.
+- Added basic CSS for Biography section spacing.
+
 ## [0.3.1] - 2025-04-13
 
 ### ✨ Features
