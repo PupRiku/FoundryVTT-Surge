@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.6.0] - 2025-04-16
+
+### ✨ Features
+
+- Added Status Effect icons for all defined SURGE! conditions, selectable via the Token HUD.
+
+### 🐛 Bug Fixes
+
+- Resolved Foundry VTT v12 deprecation warnings for `StatusEffectConfig#label` and `StatusEffectConfig#icon` by using `name` and `img` properties during programmatic status effect registration.
+
+### 🔧 Maintenance
+
+- Refactored Status Effect registration to be handled programmatically in `surge.js`'s `init` hook, removing the non-functional definition from `system.json`.
+- Changed Status Effect registration to fully replace the default Foundry VTT effects list with the SURGE!-specific list in the UI, instead of appending to it.
+
 ## [0.5.1] - 2025-04-14
 
 ### 🐛 Bug Fixes
