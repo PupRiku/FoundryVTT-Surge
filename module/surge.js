@@ -1,5 +1,123 @@
 import { SurgeItemSheet } from './item-sheet.js';
 
+const SURGE_STATUS_EFFECTS = [
+  {
+    _id: 'CiFbrJB644My1E7a',
+    id: 'blinded',
+    label: 'Blinded',
+    icon: 'systems/surge/assets/icons/conditions/blinded.svg',
+  },
+  {
+    _id: 'X0B94OsMIFFHYykC',
+    id: 'confused',
+    label: 'Confused',
+    icon: 'systems/surge/assets/icons/conditions/confused.svg',
+  },
+  {
+    _id: '1nDy2YviZYsHA6WQ',
+    id: 'crushed',
+    label: 'Crushed',
+    icon: 'systems/surge/assets/icons/conditions/crushed.svg',
+  },
+  {
+    _id: 'zhlwmiICCILgoceK',
+    id: 'deafened',
+    label: 'Deafened',
+    icon: 'systems/surge/assets/icons/conditions/deafened.svg',
+  },
+  {
+    _id: 'upqoDHxug18MJTJl',
+    id: 'flame-resistant',
+    label: 'Flame Resistant',
+    icon: 'systems/surge/assets/icons/conditions/flame-resistant.svg',
+  },
+  {
+    _id: 'c0Hp54Munn0qjmOw',
+    id: 'flammable',
+    label: 'Flammable',
+    icon: 'systems/surge/assets/icons/conditions/flammable.svg',
+  },
+  {
+    _id: 'ra1oykUkbjco9M4K',
+    id: 'frightened',
+    label: 'Frightened',
+    icon: 'systems/surge/assets/icons/conditions/frightened.svg',
+  },
+  {
+    _id: 'NoL0eThjNde5wvP1',
+    id: 'frozen',
+    label: 'Frozen',
+    icon: 'systems/surge/assets/icons/conditions/frozen.svg',
+  },
+  {
+    _id: '4g684UdZKfGoFVsF',
+    id: 'insulated',
+    label: 'Insulated',
+    icon: 'systems/surge/assets/icons/conditions/insulated.svg',
+  },
+  {
+    _id: 'Da6o6o1vHy0revBT',
+    id: 'invisible',
+    label: 'Invisible',
+    icon: 'systems/surge/assets/icons/conditions/invisible.svg',
+  },
+  {
+    _id: 'CtILfChEik9iDE5E',
+    id: 'mute',
+    label: 'Mute',
+    icon: 'systems/surge/assets/icons/conditions/mute.svg',
+  },
+  {
+    _id: '0nHv67C41zCeqPAB',
+    id: 'paralyzed',
+    label: 'Paralyzed',
+    icon: 'systems/surge/assets/icons/conditions/paralyzed.svg',
+  },
+  {
+    _id: 'QfxIEGwt814oIiJe',
+    id: 'pinned',
+    label: 'Pinned',
+    icon: 'systems/surge/assets/icons/conditions/pinned.svg',
+  },
+  {
+    _id: 'Dg7i2lzQCcCsX3LR',
+    id: 'poisoned',
+    label: 'Poisoned',
+    icon: 'systems/surge/assets/icons/conditions/poisoned.svg',
+  },
+  {
+    _id: '0TUl3HTQw2sBdz5h',
+    id: 'prone',
+    label: 'Prone',
+    icon: 'systems/surge/assets/icons/conditions/prone.svg',
+  },
+  {
+    _id: 'ALLZtyqc01Ir0bxZ',
+    id: 'restrained',
+    label: 'Restrained',
+    icon: 'systems/surge/assets/icons/conditions/restrained.svg',
+  },
+  {
+    _id: 'ME4wf44uWUZihe1M',
+    id: 'stunned',
+    label: 'Stunned',
+    icon: 'systems/surge/assets/icons/conditions/stunned.svg',
+  },
+  {
+    _id: 'oxnyO8qon9F672wl',
+    id: 'unconscious',
+    label: 'Unconscious',
+    icon: 'systems/surge/assets/icons/conditions/unconscious.svg',
+  },
+  {
+    _id: 'X1DSVUGsSBhkBSGa',
+    id: 'wet',
+    label: 'Wet',
+    icon: 'systems/surge/assets/icons/conditions/wet.svg',
+  },
+  // IMPORTANT: Make sure the _id values here are the same unique IDs you generated before!
+];
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -827,6 +945,25 @@ Actors.registerSheet(
 // You can add Hooks here for system setup, migrations, etc.
 Hooks.once('init', () => {
   console.log('SURGE! | System Initializing...');
+
+  // --- Replace Default Status Effects with Custom Ones ---
+  console.log('SURGE! | Replacing default status effects with custom list...');
+
+  // Map the SURGE_STATUS_EFFECTS array to the required format {id, name, img}
+  const customEffects = SURGE_STATUS_EFFECTS.map((effect) => ({
+    id: effect.id, // Machine-readable ID
+    name: effect.label, // Human-readable name (V12+ standard)
+    img: effect.icon, // Path to the icon (V12+ standard)
+    // Note: We are intentionally omitting _id as it's not part of the standard CONFIG.statusEffects definition
+  }));
+
+  // Directly assign the mapped array to CONFIG.statusEffects, overwriting the defaults
+  CONFIG.statusEffects = customEffects;
+
+  console.log(
+    `SURGE! | Registered ${CONFIG.statusEffects.length} custom status effects.`
+  );
+  // --- End Status Effect Registration ---
 
   // Add system-specific configuration settings, constants, etc. here if needed
   // CONFIG.SURGE = { /* custom config data */ };
