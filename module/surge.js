@@ -250,6 +250,24 @@ const burningEffectData = {
   },
 };
 
+// --- Active Effect Data for Flame Resistant ---
+const flameResistantEffectData = {
+  name: 'Flame Resistant', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/flame-resistant.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Assume permanent unless source specifies duration
+  disabled: false, // Explicitly enabled
+  changes: [
+    // Flag to indicate the condition is active for GM reference and potential future checks
+    {
+      key: 'flags.surge.flameResistant',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  // Note: No 'flags' property needed here unless initializing other data
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -1663,6 +1681,10 @@ Hooks.once('init', () => {
     // Add overrides specifically for 'confused'
     if (effect.id === 'confused') {
       effectData.overrides = ['frightened']; // Assuming 'frightened' is the ID of the Frightened status
+    }
+    // Add overrides specifically for 'flame-resistant'
+    if (effect.id === 'flame-resistant') {
+      effectData.overrides = ['surge-burning']; // Prevent 'surge-burning' status/effect
     }
     return effectData;
   });
