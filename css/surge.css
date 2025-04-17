@@ -762,3 +762,27 @@
   padding: 0 2px;
   font-weight: bold;
 }
+
+/* --- Effects Tab Styling --- */
+.tab.effects .effects-list .effect-icon {
+  flex: 0 0 28px; /* Prevent shrinking/growing in flex layout */
+  width: 28px;
+  height: 28px;
+  margin-right: 5px; /* Add some space between icon and name */
+  object-fit: contain; /* Scales image while preserving aspect ratio */
+  border: none; /* Override default image borders if any */
+}
+
+/* Optional: Ensure effect name takes up remaining space */
+.tab.effects .effects-list .effect-data {
+  flex: 1;
+  display: flex; /* Use flex for vertical alignment if needed */
+  flex-direction: column; /* Stack name and duration */
+  justify-content: center; /* Center vertically */
+}
+
+/* Optional: Ensure controls stay fixed width */
+.tab.effects .effects-list .effect-controls {
+  flex: 0 0 80px; /* Adjust width as needed for your controls */
+  text-align: right;
+}

@@ -115,6 +115,7 @@
       <a class='item active' data-tab='main'>Main</a>
       <a class='item' data-tab='items'>Inventory</a>
       <a class='item' data-tab='description'>Biography</a>
+      <a class='item' data-tab='effects'>Effects</a>
       {{! Add more tabs as needed (e.g., Spells, Notes) }}
     </nav>
 
@@ -396,6 +397,36 @@
       {{! End biography-content }}
     </div>
     {{! End Biography Tab }}
+
+    {{! Effects Tab Content }}
+    <div class='tab effects' data-group='primary' data-tab='effects'>
+      <h3 class="effects-header">Active Effects</h3>
+
+      {{! Optional: Add Control Button - We can add this later if needed }}
+      <ol class="effects-list item-list">
+        {{! Loop through applied effects (respects overrides/temporary effects) }}
+        {{#each actor.appliedEffects as |effect|}}
+          <li class="effect item flexrow" data-effect-id="{{effect.id}}">
+            <img class="effect-icon item-image" src="{{effect.img}}"/>
+            <div class="effect-data item-name">
+              <h4 class="effect-name">{{effect.name}}</h4>
+              {{#if effect.duration.label}}
+                <div class="effect-duration">
+                  {{effect.duration.label}}
+                </div>
+              {{/if}}
+            </div>
+            {{! Standard Foundry controls - Handled by core listeners }}
+            <div class="effect-controls item-controls">
+              <a class="effect-control {{#unless effect.disabled}}active{{/unless}}" data-action="toggle" title="Toggle Effect"><i class="fas fa-power-off"></i></a>
+              <a class="effect-control" data-action="edit" title="Edit Effect"><i class="fas fa-edit"></i></a>
+              <a class="effect-control" data-action="delete" title="Delete Effect"><i class="fas fa-trash"></i></a>
+            </div>
+          </li>
+        {{/each}}
+      </ol>
+    </div>
+    {{! End Effects Tab }}
 
   </section>
   {{! End Sheet Body }}
