@@ -178,6 +178,32 @@ const helplessEffectData = {
   flags: { surge: { temporaryConfusedEffect: true } }, // Flag to mark it as temporary
 };
 
+// --- Active Effect Data for Crushed ---
+const crushedEffectData = {
+  name: 'Crushed',
+  img: 'systems/surge/assets/icons/conditions/crushed.svg',
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until removed externally
+  changes: [
+    // Override movement value
+    {
+      key: 'system.passives.movement.value',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: '0', // Set movement to 0
+      priority: 50, // High priority to ensure it overrides other movement effects
+    },
+    // Flag to indicate the crushed state for JS checks
+    {
+      key: 'flags.surge.crushed',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+    // Note: Preventing speech is usually roleplaying; add flag if needed for specific checks later
+    // { key: "flags.surge.cannotSpeak", mode: OVERRIDE, value: "true", priority: 10 }
+  ],
+  // No flags.core.statusId needed
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -550,6 +576,15 @@ export class SurgeCharacterSheet extends ActorSheet {
       if (skillKey === 'martial') {
         if (isShift) {
           // Melee Weapon Attack
+          // --- Check if Crushed ---
+          if (this.actor.flags?.surge?.crushed === true) {
+            ui.notifications.warn(
+              `${this.actor.name} cannot make melee attacks while Crushed.`
+            );
+            return; // Stop this specific action
+          }
+          // --- End Check ---
+
           const strLevel = actorAttributes.str?.value ?? 0;
           // Combine penalties with attack bonus
           let modifiers = [
@@ -595,6 +630,12 @@ export class SurgeCharacterSheet extends ActorSheet {
           );
         }
       } else {
+        if (this.actor.flags?.surge?.crushed === true) {
+          ui.notifications.warn(
+            `${this.actor.name} cannot perform basic ${skill.label} checks while Crushed.`
+          );
+          return;
+        }
         // Other skill basic checks
         console.log(
           `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
@@ -754,6 +795,13 @@ export class SurgeCharacterSheet extends ActorSheet {
    */
   async _onItemAttackRoll(event) {
     event.preventDefault();
+    // --- Check if Crushed ---
+    if (this.actor.flags?.surge?.crushed === true) {
+      ui.notifications.warn(`${this.actor.name} cannot attack while Crushed.`);
+      return; // Stop the function
+    }
+    // --- End Check ---
+
     const element = event.currentTarget;
     const li = element.closest('.item');
     const itemId = li?.dataset?.itemId;
@@ -1167,161 +1215,214 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
   const sourceToken = combatant.token?.object; // Get the Token _Object_ on the canvas
   if (!actor || !sourceToken) return;
 
-  // Check if the actor is Confused
+  // --- Handle Confused Condition ---
   const isConfused = actor.flags?.surge?.confused === true;
-  // Alternate check: const isConfused = actor.effects.some(e => e.flags?.core?.statusId === 'confused' && !e.disabled);
-  if (!isConfused) {
-    return;
-  }
+  if (isConfused) {
+    console.log(
+      `SURGE | Detected start of turn for Confused actor: ${actor.name}`
+    );
+    const roll = await new Roll('1d6').evaluate();
+    const rollResult = roll.total;
+    roll.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor: actor }),
+      flavor: ` rolls 1d6 for Confusion effect:`,
+    });
+    let messageContent = `${actor.name} is Confused (Rolled ${rollResult}) and `;
+    let closestTarget = null;
+    let closestTargetName = 'something nearby';
+    if (rollResult <= 4) {
+      let minDist = Infinity;
+      const sourceCenter = sourceToken?.center;
+      if (
+        sourceCenter &&
+        typeof sourceCenter.x === 'number' &&
+        typeof sourceCenter.y === 'number'
+      ) {
+        for (const potentialCombatant of combat.combatants) {
+          if (potentialCombatant.id === combatant.id) continue; // Skip self
+          if (!potentialCombatant.actor || !potentialCombatant.tokenId)
+            continue; // Skip if no actor or token ID
+          if (potentialCombatant.isDefeated) continue; // Skip defeated combatants
+          const targetTokenObject = canvas.tokens.get(
+            potentialCombatant.tokenId
+          );
+          if (!targetTokenObject || targetTokenObject.document?.hidden)
+            continue;
+          if ((targetTokenObject.actor?.system?.passives?.hp?.value ?? 0) <= 0)
+            continue;
+          const targetCenter = targetTokenObject.center;
+          console.log(
+            `SURGE DEBUG | Checking Target: ${potentialCombatant.name}`
+          );
+          console.log(`SURGE DEBUG | Target Center:`, targetCenter);
+          if (
+            targetCenter &&
+            typeof targetCenter.x === 'number' &&
+            typeof targetCenter.y === 'number'
+          ) {
+            try {
+              const pathMeasurement = canvas.grid.measurePath([
+                sourceCenter,
+                targetCenter,
+              ]);
+              const d = pathMeasurement.distance;
+              console.log(
+                `SURGE DEBUG | Calculated Distance to ${potentialCombatant.name}: ${d}`
+              );
 
-  console.log(
-    `SURGE | Detected start of turn for Confused actor: ${actor.name}`
-  );
-
-  // --- Roll 1d6 ---
-  const roll = await new Roll('1d6').evaluate();
-  const rollResult = roll.total;
-  // Send the confusion roll result to chat immediately
-  roll.toMessage({
-    speaker: ChatMessage.getSpeaker({ actor: actor }),
-    flavor: ` rolls 1d6 for Confusion effect:`,
-  });
-
-  // --- Determine Action ---
-  let messageContent = `${actor.name} is Confused (Rolled ${rollResult}) and `;
-  let closestTarget = null;
-  let closestTargetName = 'something nearby'; // Default text
-
-  // --- Find Closest Creature (Basic Implementation) ---
-  if (rollResult <= 4) {
-    // Only need target for 1-4
-    let minDist = Infinity;
-    const sourceCenter = sourceToken?.center;
-
-    // Ensure we have source center before proceeding
-    if (
-      sourceCenter &&
-      typeof sourceCenter.x === 'number' &&
-      typeof sourceCenter.y === 'number'
-    ) {
-      // Iterate through combatants in the current combat encounter
-      for (const potentialCombatant of combat.combatants) {
-        // --- Filter potential targets ---
-        if (potentialCombatant.id === combatant.id) continue; // Skip self
-        if (!potentialCombatant.actor || !potentialCombatant.tokenId) continue; // Skip if no actor or token ID
-        if (potentialCombatant.isDefeated) continue; // Skip defeated combatants
-
-        // Get the Token OBJECT from the canvas using the combatant's tokenId
-        const targetTokenObject = canvas.tokens.get(potentialCombatant.tokenId);
-
-        // Check if the token object exists on the CURRENT canvas and isn't hidden
-        if (!targetTokenObject || targetTokenObject.document?.hidden) continue;
-
-        // Check HP (using the actor from the canvas token object for consistency)
-        if ((targetTokenObject.actor?.system?.passives?.hp?.value ?? 0) <= 0)
-          continue;
-
-        // Check if target has valid center coordinates
-        const targetCenter = targetTokenObject.center;
-        console.log(
-          `SURGE DEBUG | Checking Target: ${potentialCombatant.name}`
-        );
-        console.log(`SURGE DEBUG | Target Center:`, targetCenter);
-
-        if (
-          targetCenter &&
-          typeof targetCenter.x === 'number' &&
-          typeof targetCenter.y === 'number'
-        ) {
-          try {
-            const pathMeasurement = canvas.grid.measurePath([
-              sourceCenter,
-              targetCenter,
-            ]);
-            const d = pathMeasurement.distance;
-            console.log(
-              `SURGE DEBUG | Calculated Distance to ${potentialCombatant.name}: ${d}`
-            );
-
-            if (d < minDist) {
-              minDist = d;
-              // Store the actual Token OBJECT as the closest target
-              closestTarget = targetTokenObject;
+              if (d < minDist) {
+                minDist = d;
+                closestTarget = targetTokenObject;
+              }
+            } catch (measureError) {
+              console.error(
+                `SURGE | Error measuring path to target ${potentialCombatant.name}:`,
+                measureError
+              );
             }
-          } catch (measureError) {
-            console.error(
-              `SURGE | Error measuring path to target ${potentialCombatant.name}:`,
-              measureError
+          } else {
+            console.warn(
+              `SURGE | Skipping distance measurement for target ${potentialCombatant.name} due to invalid center point.`
             );
           }
-        } else {
-          console.warn(
-            `SURGE | Skipping distance measurement for target ${potentialCombatant.name} due to invalid center point.`
+        }
+      } else {
+        console.warn(
+          `SURGE | Skipping target search due to invalid source center point.`
+        );
+      }
+
+      if (closestTarget) {
+        closestTargetName = closestTarget.name;
+      }
+    }
+    // --- Determine Message and Apply Helpless if needed ---
+    switch (rollResult) {
+      case 1:
+      case 2:
+        messageContent += `attacks the closest creature: ${closestTargetName}! (GM should adjudicate)`;
+        break;
+      case 3:
+      case 4:
+        messageContent += `falls in love with the closest creature: ${closestTargetName}, defending it! (GM should adjudicate)`;
+        break;
+      case 5:
+      case 6:
+        messageContent += `is incapable of acting or defending this turn!`;
+        // --- Apply or Reset Helpless Effect ---
+        try {
+          // Find the existing temporary Helpless effect from this source
+          const existingHelpless = actor.effects.find(
+            (e) => e.flags?.surge?.temporaryConfusedEffect === true
+          );
+
+          if (existingHelpless) {
+            // If found, reset its duration back to 1 round
+            await existingHelpless.update({ duration: { rounds: 1 } });
+            console.log(
+              `SURGE | Reset duration of existing Helpless effect for ${actor.name}`
+            );
+          } else {
+            // If not found, create a new one
+            // Ensure helplessEffectData is accessible (defined elsewhere in the file)
+            await ActiveEffect.create(helplessEffectData, { parent: actor });
+            console.log(
+              `SURGE | Applied NEW Helpless (Confused) effect to ${actor.name}`
+            );
+          }
+        } catch (err) {
+          console.error(
+            `SURGE | Failed to apply/reset Helpless effect for ${actor.name}:`,
+            err
           );
         }
-      }
-    } else {
-      console.warn(
-        `SURGE | Skipping target search due to invalid source center point.`
-      );
+        // --- End Apply or Reset ---
+        break;
     }
-
-    if (closestTarget) {
-      closestTargetName = closestTarget.name;
-    }
+    // --- Send Final Outcome Message ---
+    ChatMessage.create({
+      user: game.user.id, // Or null to appear as "System"
+      speaker: ChatMessage.getSpeaker({ actor: actor }),
+      content: messageContent,
+      // type: CONST.CHAT_MESSAGE_TYPES.OTHER // Or EMOTE etc.
+    });
   }
 
-  // --- Determine Message and Apply Helpless if needed ---
-  switch (rollResult) {
-    case 1:
-    case 2:
-      messageContent += `attacks the closest creature: ${closestTargetName}! (GM should adjudicate)`;
-      break;
-    case 3:
-    case 4:
-      messageContent += `falls in love with the closest creature: ${closestTargetName}, defending it! (GM should adjudicate)`;
-      break;
-    case 5:
-    case 6:
-      messageContent += `is incapable of acting or defending this turn!`;
-      // --- Apply or Reset Helpless Effect ---
-      try {
-        // Find the existing temporary Helpless effect from this source
-        const existingHelpless = actor.effects.find(
-          (e) => e.flags?.surge?.temporaryConfusedEffect === true
-        );
+  // --- Handle Crushed Condition Damage ---
+  const isCrushed = actor.flags?.surge?.crushed === true; // This check (using actor flags) is still okay because 'flags.surge.crushed' is set via 'changes'
+  console.log(
+    `SURGE | Checking Crushed status for ${actor.name}: ${isCrushed}`
+  );
 
-        if (existingHelpless) {
-          // If found, reset its duration back to 1 round
-          await existingHelpless.update({ duration: { rounds: 1 } });
-          console.log(
-            `SURGE | Reset duration of existing Helpless effect for ${actor.name}`
+  if (isCrushed) {
+    // Find the specific "Crushed" Active Effect on the actor
+    // We can find it by the flag it sets OR by its name/icon if more reliable
+    // Let's try finding by the flag set in its 'changes' array first:
+    const crushedEffect = actor.effects.find(
+      (e) =>
+        e.changes.some((c) => c.key === 'flags.surge.crushed') && !e.disabled
+    );
+    // Alternative find by name: const crushedEffect = actor.effects.find(e => e.name === "Crushed" && !e.disabled);
+
+    if (!crushedEffect) {
+      console.warn(
+        `SURGE | Actor ${actor.name} is flagged as Crushed, but the Active Effect was not found.`
+      );
+      return; // Exit if we can't find the effect for some reason
+    }
+
+    console.log(`SURGE | Found Crushed effect:`, crushedEffect); // Log the found effect
+
+    // Retrieve the severity flag *from the effect's flags*
+    const severityFlagValue = crushedEffect.flags?.surge?.crushSeverity;
+    console.log(
+      `SURGE | Raw crushSeverity flag value from effect:`,
+      severityFlagValue
+    ); // Log raw flag value
+
+    const damagePerRound = Number(severityFlagValue ?? 0); // Convert to number, default 0
+    console.log(`SURGE | Calculated damagePerRound: ${damagePerRound}`); // Log calculated damage
+
+    if (damagePerRound > 0) {
+      console.log(
+        `SURGE | Applying ${damagePerRound} damage to ${actor.name} from Crushed.`
+      );
+      try {
+        const currentHp = actor.system.passives.hp.value;
+        // Ensure HP path is correct
+        if (typeof currentHp !== 'number') {
+          console.error(
+            `SURGE | Could not get valid current HP for ${actor.name}`
           );
-        } else {
-          // If not found, create a new one
-          // Ensure helplessEffectData is accessible (defined elsewhere in the file)
-          await ActiveEffect.create(helplessEffectData, { parent: actor });
-          console.log(
-            `SURGE | Applied NEW Helpless (Confused) effect to ${actor.name}`
-          );
+          return;
         }
+        const newHp = Math.max(0, currentHp - damagePerRound); // Prevent negative HP
+        console.log(
+          `SURGE | Current HP: ${currentHp}, Damage: ${damagePerRound}, New HP: ${newHp}`
+        ); // Log HP change
+
+        await actor.update({ 'system.passives.hp.value': newHp });
+        console.log(`SURGE | Actor HP updated.`); // Log successful update
+
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ alias: 'Crushing Force' }),
+          content: `${actor.name} takes ${damagePerRound} damage from being Crushed.`,
+        });
       } catch (err) {
         console.error(
-          `SURGE | Failed to apply/reset Helpless effect for ${actor.name}:`,
+          `SURGE | Failed to apply Crushed damage to ${actor.name}:`,
           err
         );
+        ui.notifications.error(
+          `Failed to apply Crushed damage to ${actor.name}.`
+        );
       }
-      // --- End Apply or Reset ---
-      break;
-  }
-
-  // --- Send Final Outcome Message ---
-  ChatMessage.create({
-    user: game.user.id, // Or null to appear as "System"
-    speaker: ChatMessage.getSpeaker({ actor: actor }),
-    content: messageContent,
-    // type: CONST.CHAT_MESSAGE_TYPES.OTHER // Or EMOTE etc.
-  });
+    } else {
+      console.log(
+        `SURGE | ${actor.name} is Crushed, but severity damage is 0 or flag missing/invalid on the effect.`
+      );
+    }
+  } // --- End Crushed Handling ---
 }
 
 // Register the combat turn handler hook once the game is ready

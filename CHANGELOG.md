@@ -1,19 +1,36 @@
 # Changelog
 
-## [0.6.0] - 2025-04-16
+## [0.6.0] - 2025-04-17
 
 ### ✨ Features
 
 - Added Status Effect icons for all defined SURGE! conditions, selectable via the Token HUD.
+- Added "Effects" tab to the Character Sheet to display and manage Active Effects.
+- Implemented mechanics for "Blinded" condition (die reduction / auto-fail via `_performRoll` check).
+- Implemented mechanics for "Confused" condition:
+  - Prevents "Frightened" condition via status effect `overrides`.
+  - Applies -2 penalty to INT/CHA attribute rolls via `_performRoll` check.
+  - Handles start-of-turn d6 roll via `updateCombat` hook, posting results to chat.
+  - Automatically applies/resets a temporary "Helpless" effect on d6 roll of 5-6.
+- Implemented core mechanics for "Crushed" condition:
+  - Overrides movement to 0 via Active Effect `changes`.
+  - Prevents attacks via checks in roll handler functions.
+  - Applies damage-per-round based on severity (`crushSeverity` flag set via macro) using `updateCombat` hook.
 
 ### 🐛 Bug Fixes
 
-- Resolved Foundry VTT v12 deprecation warnings for `StatusEffectConfig#label` and `StatusEffectConfig#icon` by using `name` and `img` properties during programmatic status effect registration.
+- Resolved Foundry VTT v12 deprecation warnings for `StatusEffectConfig#label`/`icon` by using `name`/`img`.
+- Resolved Foundry VTT v11 deprecation warning for `flags.core.statusId` on Active Effects created via macro.
+- Fixed Active Effect controls (toggle/edit/delete) on the Effects tab by implementing custom handlers (`_onEffectToggle`, `_onEffectEdit`, `_onEffectDelete`) in `SurgeCharacterSheet` to bypass issue with core listeners not firing.
 
 ### 🔧 Maintenance
 
-- Refactored Status Effect registration to be handled programmatically in `surge.js`'s `init` hook, removing the non-functional definition from `system.json`.
-- Changed Status Effect registration to fully replace the default Foundry VTT effects list with the SURGE!-specific list in the UI, instead of appending to it.
+- Refactored Status Effect registration to be handled programmatically in `surge.js`'s `init` hook.
+- Changed Status Effect registration to fully replace the default Foundry VTT effects list.
+- Refined target-finding logic for "Confused" start-of-turn behavior to iterate combatants.
+- Added workaround for apparent core Foundry VTT bug (as of v12.331) where 1-round duration effects do not auto-expire; "Helpless" effect duration is now reset if triggered on consecutive turns.
+- Updated "Apply Crushed" macro to use `Dialog` for severity input instead of unsupported `prompt()`.
+- Updated Active Effect flag reading logic for `crushSeverity` to read from the effect's flags (`effect.flags`) instead of actor flags (`actor.flags`).
 
 ## [0.5.1] - 2025-04-14
 
