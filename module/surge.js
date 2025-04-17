@@ -286,6 +286,31 @@ const flameResistantEffectData = {
   // Note: No 'flags' property needed here unless initializing other data
 };
 
+// --- Active Effect Data for Frightened ---
+const frightenedEffectData = {
+  name: 'Frightened', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/frightened.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Persists until removed
+  disabled: false, // Explicitly enabled
+  changes: [
+    // Flag to indicate the condition is active for GM reference and potential future checks
+    {
+      key: 'flags.surge.frightened',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  // Add description for GM reference on the effect sheet
+  description:
+    '<p>Unable to take actions against the source of fear. Can take other actions.</p><p>May attempt contested CHA vs. Source to remove. Removed if Confused.</p>',
+  flags: {
+    surge: {
+      // We will try to add frightenedSourceUuid via the macro
+    },
+  },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
