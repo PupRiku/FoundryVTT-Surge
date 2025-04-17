@@ -405,7 +405,7 @@
       {{! Optional: Add Control Button - We can add this later if needed }}
       <ol class="effects-list item-list">
         {{! Loop through applied effects (respects overrides/temporary effects) }}
-        {{#each actor.appliedEffects as |effect|}}
+        {{#each actor.effects as |effect|}}
           <li class="effect item flexrow" data-effect-id="{{effect.id}}">
             <img class="effect-icon item-image" src="{{effect.img}}"/>
             <div class="effect-data item-name">

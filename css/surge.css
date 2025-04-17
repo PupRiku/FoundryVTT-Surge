@@ -786,3 +786,15 @@
   flex: 0 0 80px; /* Adjust width as needed for your controls */
   text-align: right;
 }
+
+.tab.effects .effects-list .effect-control.active {
+  color: #3fb93f; /* Bright green color for active/enabled */
+  /* Optional: Add a subtle glow like the equip toggle */
+  text-shadow: 0 0 3px #aaf0aa;
+}
+
+/* Optional: Style for hovering over the active toggle button */
+.tab.effects .effects-list .effect-control.active:hover {
+  color: #2e8a2e; /* Darker green on hover */
+  text-shadow: 0 0 5px #8fec8f;
+}
