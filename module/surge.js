@@ -204,6 +204,24 @@ const crushedEffectData = {
   // No flags.core.statusId needed
 };
 
+// --- Active Effect Data for Deafened ---
+const deafenedEffectData = {
+  name: 'Deafened', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/deafened.svg', // V12+ img
+  duration: { seconds: null, rounds: null, turns: null }, // Default: Infinite/Permanent (2d6 hrs needs JS on apply)
+  changes: [
+    // Set a flag to indicate the condition is active
+    {
+      key: 'flags.surge.deafened',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+    // We will add JS checks later for the conditional -3 penalty
+  ],
+  // No flags.core.statusId needed
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -448,6 +466,7 @@ export class SurgeCharacterSheet extends ActorSheet {
     // --- End of Menace Calculation ---
 
     console.log('SURGE! | Character Sheet Data Context:', context);
+
     return context;
   }
 
@@ -1083,28 +1102,70 @@ export class SurgeCharacterSheet extends ActorSheet {
 
   /**
    * Performs the roll for Magic Defense.
-   * (Mystic Roll + INT Level) - Can be overridden by specific spells later.
+   * (Mystic Roll + INT Level) - Affected by Deafened penalty.
    * @private
    */
   async _rollMagicDefense() {
+    console.log(
+      `SURGE | --- Executing _rollMagicDefense for ${this.actor.name} ---`
+    ); // Log function start
+
     const skill = this.actor.system.skills.mystic;
     const attribute = this.actor.system.attributes.int;
     const skillLevel = skill?.value ?? 1;
     const intLevel = attribute?.value ?? 0;
 
-    // Get specific penalties for Mystic skill and INT attribute
+    // Get specific penalties for Mystic skill and INT attribute from equipment
     const penalties = this._getEquippedPenalties('int', 'mystic');
+    console.log(
+      `SURGE | Equipment Penalties found:`,
+      JSON.parse(JSON.stringify(penalties))
+    ); // Log equipment penalties
 
+    // --- Check for Deafened ---
+    const rawDeafenedFlag = this.actor.flags?.surge?.deafened; // Get raw flag value
+    console.log(
+      `SURGE | Raw Deafened Flag (actor.flags.surge.deafened):`,
+      rawDeafenedFlag
+    ); // Log raw flag value
+
+    const isDeafened = rawDeafenedFlag === true; // Strict check for boolean true
+    console.log(`SURGE | isDeafened check result: ${isDeafened}`); // Log boolean result
+
+    const deafenedPenalty = [];
+    if (isDeafened) {
+      console.log(`SURGE | Condition Met: Adding -3 Deafened Penalty.`); // Confirm block entered
+      deafenedPenalty.push({ value: -3, label: 'Deafened Penalty (Defense)' });
+    } else {
+      console.log(`SURGE | Condition NOT Met: Not adding Deafened Penalty.`);
+    }
+    console.log(
+      `SURGE | deafenedPenalty array:`,
+      JSON.parse(JSON.stringify(deafenedPenalty))
+    ); // Log the penalty array
+
+    // Combine modifiers
     const modifiers = [
-      ...penalties, // Apply penalties first
-      { value: intLevel, label: 'INT Level' }, // Add base attribute bonus
+      ...penalties,
+      ...deafenedPenalty, // Add Deafened penalty here
+      { value: intLevel, label: 'INT Level' },
     ];
+
     // Filter out zero-value modifiers
     const finalModifiers = modifiers.filter((m) => m.value !== 0);
+    console.log(
+      `SURGE | Final Modifiers before roll:`,
+      JSON.parse(JSON.stringify(finalModifiers))
+    ); // Log final mods
 
-    // NOTE: Logic for spell-specific defense rolls not yet implemented.
     const label = `Magic Defense (${skill?.label || 'Mystic'})`;
-    await this._performRoll(skillLevel, label, finalModifiers);
+
+    // Call _performRoll
+    console.log(
+      `SURGE | Calling _performRoll with level: ${skillLevel}, label: ${label}, attributeKey: 'int'`
+    );
+    await this._performRoll(skillLevel, label, finalModifiers, 'int');
+    console.log(`SURGE | --- _rollMagicDefense Finished ---`);
   }
 
   /**
@@ -1116,11 +1177,43 @@ export class SurgeCharacterSheet extends ActorSheet {
     event.preventDefault();
     const effectId = event.currentTarget.closest('.effect')?.dataset?.effectId;
     const effect = this.actor.effects.get(effectId);
+
     if (effect) {
+      const currentDisabledState = effect.disabled; // Get current state
+      console.log(`SURGE | --- _onEffectToggle START ---`);
+      console.log(`SURGE | Toggling effect: ${effect.name} ${effectId}`);
+      console.log(
+        `SURGE | Current 'disabled' state BEFORE update: ${currentDisabledState}`
+      );
+
       try {
-        await effect.update({ disabled: !effect.disabled });
-        console.log(`SURGE | Toggled effect ${effect.name} (${effectId})`);
-        // The sheet should re-render automatically on update
+        // Calculate the new state
+        const newDisabledState = !currentDisabledState;
+        console.log(
+          `SURGE | Attempting to update 'disabled' to: ${newDisabledState}`
+        );
+
+        // Perform the update
+        await effect.update({ disabled: newDisabledState });
+
+        // Get the effect again AFTER the update to check its state
+        // Note: The 'effect' variable might hold old data after update, re-fetching is safer.
+        const effectAfterUpdate = this.actor.effects.get(effectId);
+
+        console.log(`SURGE | Update successful (according to code flow).`);
+        console.log(
+          `SURGE | Effect data AFTER update (if found):`,
+          effectAfterUpdate
+        ); // Log the whole object AFTER update
+        if (effectAfterUpdate) {
+          console.log(
+            `SURGE | 'disabled' state AFTER update: ${effectAfterUpdate.disabled}`
+          );
+        } else {
+          console.error(
+            `SURGE | Effect ${effectId} seems to be missing immediately after update!`
+          ); // Log if it's gone
+        }
       } catch (err) {
         console.error(`SURGE | Failed to toggle effect ${effectId}:`, err);
         ui.notifications.error('Failed to toggle effect.');
@@ -1130,6 +1223,7 @@ export class SurgeCharacterSheet extends ActorSheet {
         `SURGE | Toggle clicked for non-existent effect ID: ${effectId}`
       );
     }
+    console.log(`SURGE | --- _onEffectToggle END ---`);
   }
 
   /**
