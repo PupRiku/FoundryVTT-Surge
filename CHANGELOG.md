@@ -10,27 +10,35 @@
 - Implemented mechanics for "Confused" condition:
   - Prevents "Frightened" condition via status effect `overrides`.
   - Applies -2 penalty to INT/CHA attribute rolls via `_performRoll` check.
-  - Handles start-of-turn d6 roll via `updateCombat` hook, posting results to chat.
-  - Automatically applies/resets a temporary "Helpless" effect on d6 roll of 5-6.
+  - Handles start-of-turn d6 roll via `updateCombat` hook (posts results, applies/resets temporary Helpless).
 - Implemented core mechanics for "Crushed" condition:
   - Overrides movement to 0 via Active Effect `changes`.
   - Prevents attacks via checks in roll handler functions.
-  - Applies damage-per-round based on severity (`crushSeverity` flag set via macro) using `updateCombat` hook.
+  - Applies damage-per-round based on severity (calculated from weight input in macro) using `updateCombat` hook.
+- Implemented mechanics for "Burning" condition:
+  - Applies escalating d6 damage per turn via `updateCombat` hook and turn counter flag.
+  - Chat message indicates when damage is doubled by Flammable condition.
+- Implemented "Deafened" condition (applies -3 penalty to Magic Defense roll via `_rollMagicDefense` check; perception penalty GM adjudicated).
+- Implemented "Flame Resistant" condition (prevents Burning application via macro check; other immunities GM adjudicated).
+- Implemented "Flammable" condition (doubles Burning damage via hook check; other sources GM adjudicated).
+- Implemented basic "Frightened" condition (sets flag, stores source UUID via macro; action restriction GM adjudicated).
 
 ### 🐛 Bug Fixes
 
-- Resolved Foundry VTT v12 deprecation warnings for `StatusEffectConfig#label`/`icon` by using `name`/`img`.
-- Resolved Foundry VTT v11 deprecation warning for `flags.core.statusId` on Active Effects created via macro.
-- Fixed Active Effect controls (toggle/edit/delete) on the Effects tab by implementing custom handlers (`_onEffectToggle`, `_onEffectEdit`, `_onEffectDelete`) in `SurgeCharacterSheet` to bypass issue with core listeners not firing.
+- Resolved Foundry VTT deprecation warnings for `StatusEffectConfig#label`/`icon`, `flags.core.statusId`, `Roll#evaluate({async})`, and `canvas.grid.measureDistance`.
+- Fixed Active Effect controls (toggle/edit/delete) on the Effects tab by implementing custom handlers in `SurgeCharacterSheet`.
+- Fixed `target.center` errors during Confused target finding by iterating combatants and adding checks.
+- Resolved `Assignment to constant variable` error in Burning/Flammable logic.
+- Fixed effect toggle initial state display by adding CSS for `.effect-control.active`.
+- Fixed effect toggle causing visual disappearance by using `actor.effects` instead of potentially buggy `actor.appliedEffects` in sheet template loop.
 
 ### 🔧 Maintenance
 
-- Refactored Status Effect registration to be handled programmatically in `surge.js`'s `init` hook.
-- Changed Status Effect registration to fully replace the default Foundry VTT effects list.
-- Refined target-finding logic for "Confused" start-of-turn behavior to iterate combatants.
-- Added workaround for apparent core Foundry VTT bug (as of v12.331) where 1-round duration effects do not auto-expire; "Helpless" effect duration is now reset if triggered on consecutive turns.
-- Updated "Apply Crushed" macro to use `Dialog` for severity input instead of unsupported `prompt()`.
-- Updated Active Effect flag reading logic for `crushSeverity` to read from the effect's flags (`effect.flags`) instead of actor flags (`actor.flags`).
+- Refactored Status Effect registration to be handled programmatically in `surge.js` `init` hook, replacing default effects.
+- Updated macros to use Foundry `Dialog` for input where needed ("Crushed").
+- Updated "Apply Confused" macro to automatically remove the "Frightened" condition.
+- Added workaround logic for core Foundry bug preventing automatic expiry of 1-round duration effects ("Helpless" duration reset).
+- Added debug logging to various functions (recommend removing before release).
 
 ## [0.5.1] - 2025-04-14
 
