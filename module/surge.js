@@ -250,6 +250,24 @@ const burningEffectData = {
   },
 };
 
+// --- Active Effect Data for Flammable ---
+const flammableEffectData = {
+  name: 'Flammable', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/flammable.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Persists until removed or Wet applied
+  disabled: false, // Explicitly enabled
+  changes: [
+    // Flag to indicate the condition is active for GM reference and JS checks
+    {
+      key: 'flags.surge.flammable',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  // No other flags needed here initially
+};
+
 // --- Active Effect Data for Flame Resistant ---
 const flameResistantEffectData = {
   name: 'Flame Resistant', // V12+ name
@@ -1492,9 +1510,6 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
 
   // --- Handle Crushed Condition Damage ---
   const isCrushed = actor.flags?.surge?.crushed === true; // This check (using actor flags) is still okay because 'flags.surge.crushed' is set via 'changes'
-  console.log(
-    `SURGE | Checking Crushed status for ${actor.name}: ${isCrushed}`
-  );
 
   if (isCrushed) {
     // Find the specific "Crushed" Active Effect on the actor
@@ -1569,9 +1584,6 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
   // --- Handle Burning Condition Damage & Escalation ---
   // Check using the flag set by the 'changes' array
   const isBurning = actor.flags?.surge?.burning === true;
-  console.log(
-    `SURGE | Checking Burning status for ${actor.name}: ${isBurning}`
-  );
 
   if (isBurning) {
     // Find the Burning Active Effect to read/update its flags
@@ -1595,14 +1607,23 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
       try {
         // Roll damage
         const damageRoll = await new Roll(`${turnCount}d6`).evaluate();
-        // Display roll in chat? (Optional)
         damageRoll.toMessage({
           speaker: ChatMessage.getSpeaker({ alias: 'Burning' }),
           flavor: `Damage taken by ${actor.name}`,
         });
 
-        const damageTaken = damageRoll.total;
-        console.log(`SURGE | Applying ${damageTaken} burning damage.`);
+        let damageTaken = damageRoll.total;
+        console.log(`SURGE | Base burning damage roll: ${damageTaken}`);
+
+        // --- Check for Flammable ---
+        const isFlammable = actor.flags?.surge?.flammable === true;
+        if (isFlammable) {
+          console.log(`SURGE | Actor is Flammable! Doubling Burning damage.`);
+          damageTaken *= 2; // Double the damage
+        }
+        // --- End Flammable Check ---
+
+        console.log(`SURGE | Applying ${damageTaken} final burning damage.`);
 
         // Apply damage (ensure HP path is correct)
         const currentHp = actor.system.passives.hp.value;
@@ -1610,6 +1631,25 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
           const newHp = Math.max(0, currentHp - damageTaken);
           await actor.update({ 'system.passives.hp.value': newHp });
           console.log(`SURGE | ${actor.name} HP updated to ${newHp}.`);
+
+          // --- Build Enhanced Chat Message Content ---
+          let damageMessageContent = '';
+          const diceRolled = `${turnCount}d6`; // The dice that were rolled
+
+          if (isFlammable) {
+            // If Flammable, show the calculation
+            damageMessageContent = `${actor.name} takes ${damageRoll.total} x 2 = <strong>${damageTaken}</strong> damage from Burning (Flammable!). [Rolled ${diceRolled}]`;
+          } else {
+            // Otherwise, just show the normal damage
+            damageMessageContent = `${actor.name} takes <strong>${damageTaken}</strong> damage from Burning. [Rolled ${diceRolled}]`;
+          }
+          // --- End Build Message ---
+
+          // Notify in chat using the constructed message
+          ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({ alias: 'Burning Effect' }), // Changed alias for clarity
+            content: damageMessageContent, // Use the message built above
+          });
         } else {
           console.error(
             `SURGE | Could not get valid current HP for ${actor.name}`
