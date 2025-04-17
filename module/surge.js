@@ -116,7 +116,12 @@ const SURGE_STATUS_EFFECTS = [
     label: 'Wet',
     icon: 'systems/surge/assets/icons/conditions/wet.svg',
   },
-  // IMPORTANT: Make sure the _id values here are the same unique IDs you generated before!
+  {
+    _id: 'oXT6pANir6091Gav',
+    id: 'surge-burning',
+    label: 'Burning',
+    icon: 'systems/surge/assets/icons/conditions/burning.svg',
+  },
 ];
 
 // --- Active Effect Data for Blinded ---
@@ -220,6 +225,29 @@ const deafenedEffectData = {
     // We will add JS checks later for the conditional -3 penalty
   ],
   // No flags.core.statusId needed
+};
+
+// --- Active Effect Data for Burning ---
+const burningEffectData = {
+  name: 'Burning', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/burning.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Persists until removed
+  disabled: false, // Explicitly enabled
+  changes: [
+    // Flag to indicate the burning state is active
+    {
+      key: 'flags.surge.burning',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  // Initialize the turn counter in the effect's flags upon creation
+  flags: {
+    surge: {
+      burningTurns: 1, // Start at 1 for the first turn's 1d6 damage
+    },
+  },
 };
 
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
@@ -1309,6 +1337,8 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
   const sourceToken = combatant.token?.object; // Get the Token _Object_ on the canvas
   if (!actor || !sourceToken) return;
 
+  console.log(`SURGE | Turn Start for: ${actor.name}`);
+
   // --- Handle Confused Condition ---
   const isConfused = actor.flags?.surge?.confused === true;
   if (isConfused) {
@@ -1517,6 +1547,82 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
       );
     }
   } // --- End Crushed Handling ---
+
+  // --- Handle Burning Condition Damage & Escalation ---
+  // Check using the flag set by the 'changes' array
+  const isBurning = actor.flags?.surge?.burning === true;
+  console.log(
+    `SURGE | Checking Burning status for ${actor.name}: ${isBurning}`
+  );
+
+  if (isBurning) {
+    // Find the Burning Active Effect to read/update its flags
+    const burningEffect = actor.effects.find(
+      (e) =>
+        e.changes.some((c) => c.key === 'flags.surge.burning') && !e.disabled
+    );
+    // Alt find: const burningEffect = actor.effects.find(e => e.flags?.surge?.burningTurns >= 1 && !e.disabled);
+
+    if (burningEffect) {
+      console.log(`SURGE | Found Burning effect:`, burningEffect);
+
+      // Get the current turn count from the effect's flags
+      let turnCount = Number(burningEffect.flags?.surge?.burningTurns ?? 1); // Default to 1 if flag missing/invalid
+      if (turnCount <= 0) turnCount = 1; // Ensure at least 1d6
+
+      console.log(
+        `SURGE | Burning turn count: ${turnCount}. Rolling ${turnCount}d6 damage.`
+      );
+
+      try {
+        // Roll damage
+        const damageRoll = await new Roll(`${turnCount}d6`).evaluate();
+        // Display roll in chat? (Optional)
+        damageRoll.toMessage({
+          speaker: ChatMessage.getSpeaker({ alias: 'Burning' }),
+          flavor: `Damage taken by ${actor.name}`,
+        });
+
+        const damageTaken = damageRoll.total;
+        console.log(`SURGE | Applying ${damageTaken} burning damage.`);
+
+        // Apply damage (ensure HP path is correct)
+        const currentHp = actor.system.passives.hp.value;
+        if (typeof currentHp === 'number') {
+          const newHp = Math.max(0, currentHp - damageTaken);
+          await actor.update({ 'system.passives.hp.value': newHp });
+          console.log(`SURGE | ${actor.name} HP updated to ${newHp}.`);
+        } else {
+          console.error(
+            `SURGE | Could not get valid current HP for ${actor.name}`
+          );
+        }
+
+        // Increment the turn count for the *next* turn by updating the effect's flag
+        const nextTurnCount = turnCount + 1;
+        await burningEffect.update({
+          'flags.surge.burningTurns': nextTurnCount,
+        });
+        console.log(
+          `SURGE | Incremented burningTurns flag to ${nextTurnCount} on effect ${burningEffect.id}`
+        );
+      } catch (err) {
+        console.error(
+          `SURGE | Failed during Burning damage/update for ${actor.name}:`,
+          err
+        );
+        ui.notifications.error(
+          `Error applying burning effect for ${actor.name}.`
+        );
+      }
+    } else {
+      console.warn(
+        `SURGE | Actor ${actor.name} is flagged as Burning, but the Active Effect was not found.`
+      );
+      // Maybe remove the flag if the effect is missing?
+      // await actor.unsetFlag("surge", "burning");
+    }
+  } // --- End Burning Handling --
 }
 
 // Register the combat turn handler hook once the game is ready
