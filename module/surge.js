@@ -12,6 +12,7 @@ const SURGE_STATUS_EFFECTS = [
     id: 'confused',
     label: 'Confused',
     icon: 'systems/surge/assets/icons/conditions/confused.svg',
+    overrides: ['frightened'],
   },
   {
     _id: '1nDy2YviZYsHA6WQ',
@@ -118,6 +119,65 @@ const SURGE_STATUS_EFFECTS = [
   // IMPORTANT: Make sure the _id values here are the same unique IDs you generated before!
 ];
 
+// --- Active Effect Data for Blinded ---
+const blindedEffectData = {
+  name: 'Blinded', // Use 'name' for V12+
+  img: 'systems/surge/assets/icons/conditions/blinded.svg', // Use 'img' for V12+
+  // Duration: Set to permanent/infinite by default for simplicity.
+  // Handling the '2d6 hours' requires JS when the effect is applied.
+  duration: { seconds: null, rounds: null, turns: null },
+  // The 'changes' array primarily sets a flag for our JS code to check.
+  changes: [
+    {
+      key: 'flags.surge.blinded', // Custom flag path
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, // Set the flag value
+      value: 'true', // Use string "true"
+      priority: 10, // Default priority is usually fine
+    },
+  ],
+  // Add a flag to easily link this AE back to the statusId if needed
+  flags: {
+    core: {
+      statusId: 'blinded',
+    },
+    // We could potentially store the duration roll result here later
+  },
+};
+
+// --- Active Effect Data for Confused ---
+const confusedEffectData = {
+  name: 'Confused', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/confused.svg', // V12+ img
+  duration: { seconds: 86400, rounds: null, turns: null }, // 1 Day
+  changes: [
+    // ONLY set the flag now
+    {
+      key: 'flags.surge.confused', // Custom flag to signal condition active
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  // No flags.core.statusId needed
+};
+
+// --- Active Effect Data for Temporary Helplessness (from Confused 5-6) ---
+const helplessEffectData = {
+  name: 'Helpless (Confused)', // Distinguish from other potential helpless states
+  img: 'icons/svg/ruins.svg', // Placeholder icon - choose one you like
+  duration: { rounds: 1, turns: null, seconds: null }, // Lasts until the start of the next turn
+  changes: [
+    {
+      key: 'flags.surge.helpless', // Custom flag
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+    // TODO: Add changes here later to reduce defense values if desired
+  ],
+  flags: { surge: { temporaryConfusedEffect: true } }, // Flag to mark it as temporary
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -177,14 +237,14 @@ export class SurgeCharacterSheet extends ActorSheet {
   /**
    * Performs a SURGE! system roll based on a stat level and optional modifiers array.
    * Includes the 'x6' exploding dice rule.
+   * Handles the 'Blinded' condition.
    * @param {number} level                The attribute or skill level (1-20).
    * @param {string} label                The label for the roll (e.g., "Strength Check").
    * @param {Array<{value: number, label: string}>} [modifiers=[]] Optional array of modifier objects.
    * @returns {Promise<void>}             Sends the result to chat.
    * @private
    */
-  async _performRoll(level, label, modifiers = []) {
-    // <<< ACCEPTS MODIFIERS ARRAY
+  async _performRoll(level, label, modifiers = [], attributeKey = null) {
     level = Math.max(1, Math.min(20, level || 1)); // Ensure level is 1-20
     const rollData = this._rollTable[level];
     if (!rollData) {
@@ -193,52 +253,100 @@ export class SurgeCharacterSheet extends ActorSheet {
       return;
     }
 
+    // --- Check for Conditions ---
+    const isBlinded = this.actor.flags?.surge?.blinded === true;
+    const isConfused = this.actor.flags?.surge?.confused === true;
+
+    // --- Apply Confused Penalty (if applicable) ---
+    // Make sure 'modifiers' is definitely an array before modifying
+    if (!Array.isArray(modifiers)) {
+      modifiers = [];
+    }
+
+    if (isConfused && (attributeKey === 'int' || attributeKey === 'cha')) {
+      console.log(
+        `SURGE | ${
+          this.actor.name
+        } is Confused. Adding -2 penalty to ${attributeKey.toUpperCase()} roll.`
+      );
+      // Add the penalty directly to the modifiers array for this roll
+      modifiers.push({ value: -2, label: 'Confused Penalty' });
+    }
+    // --- End Confused Penalty ---
+
+    let diceToRoll = rollData.dice;
+    let autoFail = false;
+
+    // --- Apply Blinded Penalty ---
+    if (isBlinded) {
+      console.log(`SURGE | ${this.actor.name} is Blinded. Reducing dice.`);
+      diceToRoll = diceToRoll - 1; // Remove one die
+
+      // Check for auto-fail condition
+      if (diceToRoll <= 0) {
+        console.log(`SURGE | Blinded auto-fail condition met.`);
+        autoFail = true;
+        diceToRoll = 0; // Ensure dice count is 0 for formula if we proceeded (we won't)
+      }
+    }
+    // --- END: Blinded Check ---
+
+    // --- Handle Auto-Fail ---
+    if (autoFail) {
+      const messageContent = `${this.actor.name} is Blinded and has no dice left to roll, automatically failing the ${label}.`;
+      ChatMessage.create({
+        user: game.user.id,
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: messageContent,
+        // You might want to add whisper targets or customize further
+      });
+      ui.notifications.warn(
+        `${this.actor.name} automatically failed ${label} due to Blindness.`
+      );
+      return; // Stop the roll process
+    }
+    // --- END: Auto-Fail Handling ---
+
     // Base formula with SURGING dice (x6)
-    let formula = `${rollData.dice}d6x6`;
+    let formula = `${diceToRoll}d6x6`;
     if (rollData.mod !== 0) {
       formula += ` + ${rollData.mod}`;
     }
 
     // Prepare data object for the Roll class, including actor data
     let rollDataObject = { ...this.actor.getRollData() };
-    let modifierDesc = []; // For logging/tooltip later if needed
+    let modifierDesc = [];
 
     // --- Loop through the modifiers array --- THIS IS THE KEY PART ---
     for (const mod of modifiers) {
-      // Ensure mod value is a valid number and non-zero
       if (typeof mod.value !== 'number' || mod.value === 0) continue;
-
       const modValue = mod.value;
-      const modLabel = mod.label || 'Modifier'; // Default label if missing
-      const modSign = modValue > 0 ? '+' : ''; // Keep sign for negative mods
-      // Create a simple, unique key like 'strlevel' or 'mod_<random>' for the data object
+      const modLabel = mod.label || 'Modifier';
+      const modSign = modValue > 0 ? '+' : '';
       const modKey =
         modLabel.toLowerCase().replace(/[^a-z0-9]/g, '') ||
         `mod${foundry.utils.randomID(4)}`;
-      // Ensure key is unique if label is generic or contains invalid chars after cleanup
       let finalKey = modKey;
-      if (!finalKey) finalKey = `mod${foundry.utils.randomID(4)}`; // Ensure key is never empty
+      if (!finalKey) finalKey = `mod${foundry.utils.randomID(4)}`;
       let i = 0;
       while (finalKey in rollDataObject) {
-        // Prevent key collisions in data object
         finalKey = `${modKey}_${++i}`;
       }
-
       console.log(
         `SURGE DEBUG | _performRoll Loop: Processing mod=${JSON.stringify(
           mod
         )}, finalKey=${finalKey}, currentFormula=${formula}`
       );
-
-      // Use BACKTICKS and correct interpolation to add to formula
-      formula += ` ${modSign} @${finalKey}`; // Use @key in formula string
-      rollDataObject[finalKey] = modValue; // Add modifier value to data under the specific key
-      modifierDesc.push(`${modLabel}: ${modSign}${modValue}`); // Keep track for logging/display
+      formula += ` ${modSign} @${finalKey}`;
+      rollDataObject[finalKey] = modValue;
+      modifierDesc.push(`${modLabel}: ${modSign}${modValue}`);
     }
     // --- End of loop ---
 
     console.log(
-      `SURGE | Rolling - Level: <span class="math-inline">\{level\}, Modifiers\: \[</span>{modifierDesc.join(', ')}], Formula: ${formula}, Data:`,
+      `SURGE | Rolling - Level: ${level}, Modifiers: [${modifierDesc.join(
+        ', '
+      )}], Formula: ${formula}, Data:`,
       rollDataObject,
       `Label: ${label}`
     );
@@ -335,17 +443,38 @@ export class SurgeCharacterSheet extends ActorSheet {
     html.find('.skill-label.rollable').click(this._onSkillRoll.bind(this));
 
     // --- Item Control Listeners ---
-    html.find('.item-edit').click(this._onItemEdit.bind(this));
-    html.find('.item-delete').click(this._onItemDelete.bind(this));
-    html
+    const inventoryTab = html.find('.tab.items');
+
+    inventoryTab.find('.item-edit').click(this._onItemEdit.bind(this));
+    inventoryTab.find('.item-delete').click(this._onItemDelete.bind(this));
+    inventoryTab
       .find('.item-toggle-equip')
       .click(this._onItemToggleEquipped.bind(this));
 
-    // --- ADD Item Roll Listeners ---
-    html.find('.item-roll-attack').click(this._onItemAttackRoll.bind(this));
-    html.find('.item-roll-damage').click(this._onItemDamageRoll.bind(this));
+    // --- Item Roll Listeners ---
+    inventoryTab
+      .find('.item-roll-attack')
+      .click(this._onItemAttackRoll.bind(this));
+    inventoryTab
+      .find('.item-roll-damage')
+      .click(this._onItemDamageRoll.bind(this));
 
-    // Add more listeners later (e.g., roll damage from item)
+    // --- Custom Effect Control Listeners ---
+    // Find controls ONLY inside the Effects tab
+    const effectsTab = html.find('.tab.effects');
+
+    // Ensure we target the correct links and bind the NEW custom methods
+    effectsTab
+      .find('.effect-control[data-action="toggle"]')
+      .click(this._onEffectToggle.bind(this));
+    effectsTab
+      .find('.effect-control[data-action="edit"]')
+      .click(this._onEffectEdit.bind(this));
+    effectsTab
+      .find('.effect-control[data-action="delete"]')
+      .click(this._onEffectDelete.bind(this));
+
+    console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
 
   /**
@@ -370,7 +499,12 @@ export class SurgeCharacterSheet extends ActorSheet {
       } else {
         // Basic Attribute Check
         let modifiers = this._getEquippedPenalties(attributeKey, null); // <<< Get penalties for this attribute
-        await this._performRoll(level, `${attribute.label} Check`, modifiers); // <<< Pass penalties
+        await this._performRoll(
+          level,
+          `${attribute.label} Check`,
+          modifiers,
+          attributeKey
+        ); // <<< Pass penalties
       }
     } else {
       console.error(
@@ -925,9 +1059,278 @@ export class SurgeCharacterSheet extends ActorSheet {
     await this._performRoll(skillLevel, label, finalModifiers);
   }
 
+  /**
+   * Handle toggling the enabled/disabled state of an Active Effect.
+   * @param {Event} event   The originating click event.
+   * @private
+   */
+  async _onEffectToggle(event) {
+    event.preventDefault();
+    const effectId = event.currentTarget.closest('.effect')?.dataset?.effectId;
+    const effect = this.actor.effects.get(effectId);
+    if (effect) {
+      try {
+        await effect.update({ disabled: !effect.disabled });
+        console.log(`SURGE | Toggled effect ${effect.name} (${effectId})`);
+        // The sheet should re-render automatically on update
+      } catch (err) {
+        console.error(`SURGE | Failed to toggle effect ${effectId}:`, err);
+        ui.notifications.error('Failed to toggle effect.');
+      }
+    } else {
+      console.warn(
+        `SURGE | Toggle clicked for non-existent effect ID: ${effectId}`
+      );
+    }
+  }
+
+  /**
+   * Handle opening the configuration sheet for an Active Effect.
+   * @param {Event} event   The originating click event.
+   * @private
+   */
+  _onEffectEdit(event) {
+    // No async needed typically for just rendering sheet
+    event.preventDefault();
+    const effectId = event.currentTarget.closest('.effect')?.dataset?.effectId;
+    const effect = this.actor.effects.get(effectId);
+    if (effect) {
+      effect.sheet.render(true);
+      console.log(
+        `SURGE | Opening sheet for effect ${effect.name} (${effectId})`
+      );
+    } else {
+      console.warn(
+        `SURGE | Edit clicked for non-existent effect ID: ${effectId}`
+      );
+    }
+  }
+
+  /**
+   * Handle deleting an Active Effect from the Actor.
+   * @param {Event} event   The originating click event.
+   * @private
+   */
+  async _onEffectDelete(event) {
+    event.preventDefault();
+    const effectId = event.currentTarget.closest('.effect')?.dataset?.effectId;
+    const effect = this.actor.effects.get(effectId);
+    if (effect) {
+      // Optional: Add a confirmation dialog here if desired
+      // Dialog.confirm({ ... title: `Delete ${effect.name}?`, yes: async () => { ... }})
+      try {
+        await effect.delete(); // effect.delete() is simpler than actor.deleteEmbeddedDocuments
+        console.log(`SURGE | Deleted effect ${effect.name} (${effectId})`);
+        // The sheet should re-render automatically on deletion
+      } catch (err) {
+        console.error(`SURGE | Failed to delete effect ${effectId}:`, err);
+        ui.notifications.error('Failed to delete effect.');
+      }
+    } else {
+      console.warn(
+        `SURGE | Delete clicked for non-existent effect ID: ${effectId}`
+      );
+    }
+  }
+
   // Define other event handler methods like _onItemAttack, etc.
   // Remember to use async for functions that perform rolls or update the actor.
 } // End of SurgeCharacterSheet class
+
+/**
+ * Handles the start of a combatant's turn to check for Confused behavior.
+ * @param {Combat} combat The Combat document being updated.
+ * @param {object} changed Object describing the changes made.
+ * @param {object} options Additional options which trigger this update.
+ * @param {string} userId The ID of the User triggering the update.
+ */
+async function handleCombatTurnStart(combat, changed, options, userId) {
+  // Only execute logic for the primary GM to avoid duplication
+  if (!game.user.isGM) {
+    return;
+  }
+
+  // Check if the turn or round number actually changed
+  if (changed.round === undefined && changed.turn === undefined) {
+    if (
+      !combat.combatant ||
+      combat.combatant?.id === combat.previous?.combatant?.id
+    ) {
+      return;
+    }
+  }
+
+  // Get the current combatant and their actor/token
+  const combatant = combat.combatant;
+  if (!combatant) return;
+  const actor = combatant.actor;
+  const sourceToken = combatant.token?.object; // Get the Token _Object_ on the canvas
+  if (!actor || !sourceToken) return;
+
+  // Check if the actor is Confused
+  const isConfused = actor.flags?.surge?.confused === true;
+  // Alternate check: const isConfused = actor.effects.some(e => e.flags?.core?.statusId === 'confused' && !e.disabled);
+  if (!isConfused) {
+    return;
+  }
+
+  console.log(
+    `SURGE | Detected start of turn for Confused actor: ${actor.name}`
+  );
+
+  // --- Roll 1d6 ---
+  const roll = await new Roll('1d6').evaluate();
+  const rollResult = roll.total;
+  // Send the confusion roll result to chat immediately
+  roll.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor: actor }),
+    flavor: ` rolls 1d6 for Confusion effect:`,
+  });
+
+  // --- Determine Action ---
+  let messageContent = `${actor.name} is Confused (Rolled ${rollResult}) and `;
+  let closestTarget = null;
+  let closestTargetName = 'something nearby'; // Default text
+
+  // --- Find Closest Creature (Basic Implementation) ---
+  if (rollResult <= 4) {
+    // Only need target for 1-4
+    let minDist = Infinity;
+    const sourceCenter = sourceToken?.center;
+
+    // Ensure we have source center before proceeding
+    if (
+      sourceCenter &&
+      typeof sourceCenter.x === 'number' &&
+      typeof sourceCenter.y === 'number'
+    ) {
+      // Iterate through combatants in the current combat encounter
+      for (const potentialCombatant of combat.combatants) {
+        // --- Filter potential targets ---
+        if (potentialCombatant.id === combatant.id) continue; // Skip self
+        if (!potentialCombatant.actor || !potentialCombatant.tokenId) continue; // Skip if no actor or token ID
+        if (potentialCombatant.isDefeated) continue; // Skip defeated combatants
+
+        // Get the Token OBJECT from the canvas using the combatant's tokenId
+        const targetTokenObject = canvas.tokens.get(potentialCombatant.tokenId);
+
+        // Check if the token object exists on the CURRENT canvas and isn't hidden
+        if (!targetTokenObject || targetTokenObject.document?.hidden) continue;
+
+        // Check HP (using the actor from the canvas token object for consistency)
+        if ((targetTokenObject.actor?.system?.passives?.hp?.value ?? 0) <= 0)
+          continue;
+
+        // Check if target has valid center coordinates
+        const targetCenter = targetTokenObject.center;
+        console.log(
+          `SURGE DEBUG | Checking Target: ${potentialCombatant.name}`
+        );
+        console.log(`SURGE DEBUG | Target Center:`, targetCenter);
+
+        if (
+          targetCenter &&
+          typeof targetCenter.x === 'number' &&
+          typeof targetCenter.y === 'number'
+        ) {
+          try {
+            const pathMeasurement = canvas.grid.measurePath([
+              sourceCenter,
+              targetCenter,
+            ]);
+            const d = pathMeasurement.distance;
+            console.log(
+              `SURGE DEBUG | Calculated Distance to ${potentialCombatant.name}: ${d}`
+            );
+
+            if (d < minDist) {
+              minDist = d;
+              // Store the actual Token OBJECT as the closest target
+              closestTarget = targetTokenObject;
+            }
+          } catch (measureError) {
+            console.error(
+              `SURGE | Error measuring path to target ${potentialCombatant.name}:`,
+              measureError
+            );
+          }
+        } else {
+          console.warn(
+            `SURGE | Skipping distance measurement for target ${potentialCombatant.name} due to invalid center point.`
+          );
+        }
+      }
+    } else {
+      console.warn(
+        `SURGE | Skipping target search due to invalid source center point.`
+      );
+    }
+
+    if (closestTarget) {
+      closestTargetName = closestTarget.name;
+    }
+  }
+
+  // --- Determine Message and Apply Helpless if needed ---
+  switch (rollResult) {
+    case 1:
+    case 2:
+      messageContent += `attacks the closest creature: ${closestTargetName}! (GM should adjudicate)`;
+      break;
+    case 3:
+    case 4:
+      messageContent += `falls in love with the closest creature: ${closestTargetName}, defending it! (GM should adjudicate)`;
+      break;
+    case 5:
+    case 6:
+      messageContent += `is incapable of acting or defending this turn!`;
+      // --- Apply or Reset Helpless Effect ---
+      try {
+        // Find the existing temporary Helpless effect from this source
+        const existingHelpless = actor.effects.find(
+          (e) => e.flags?.surge?.temporaryConfusedEffect === true
+        );
+
+        if (existingHelpless) {
+          // If found, reset its duration back to 1 round
+          await existingHelpless.update({ duration: { rounds: 1 } });
+          console.log(
+            `SURGE | Reset duration of existing Helpless effect for ${actor.name}`
+          );
+        } else {
+          // If not found, create a new one
+          // Ensure helplessEffectData is accessible (defined elsewhere in the file)
+          await ActiveEffect.create(helplessEffectData, { parent: actor });
+          console.log(
+            `SURGE | Applied NEW Helpless (Confused) effect to ${actor.name}`
+          );
+        }
+      } catch (err) {
+        console.error(
+          `SURGE | Failed to apply/reset Helpless effect for ${actor.name}:`,
+          err
+        );
+      }
+      // --- End Apply or Reset ---
+      break;
+  }
+
+  // --- Send Final Outcome Message ---
+  ChatMessage.create({
+    user: game.user.id, // Or null to appear as "System"
+    speaker: ChatMessage.getSpeaker({ actor: actor }),
+    content: messageContent,
+    // type: CONST.CHAT_MESSAGE_TYPES.OTHER // Or EMOTE etc.
+  });
+}
+
+// Register the combat turn handler hook once the game is ready
+Hooks.once('ready', () => {
+  Hooks.on('updateCombat', handleCombatTurnStart);
+  console.log(
+    'SURGE! | Registered combat turn handler for Confused condition.'
+  );
+});
 
 // --- System Initialization ---
 
@@ -950,12 +1353,18 @@ Hooks.once('init', () => {
   console.log('SURGE! | Replacing default status effects with custom list...');
 
   // Map the SURGE_STATUS_EFFECTS array to the required format {id, name, img}
-  const customEffects = SURGE_STATUS_EFFECTS.map((effect) => ({
-    id: effect.id, // Machine-readable ID
-    name: effect.label, // Human-readable name (V12+ standard)
-    img: effect.icon, // Path to the icon (V12+ standard)
-    // Note: We are intentionally omitting _id as it's not part of the standard CONFIG.statusEffects definition
-  }));
+  const customEffects = SURGE_STATUS_EFFECTS.map((effect) => {
+    let effectData = {
+      id: effect.id,
+      name: effect.label, // Use V12+ name
+      img: effect.icon, // Use V12+ img
+    };
+    // Add overrides specifically for 'confused'
+    if (effect.id === 'confused') {
+      effectData.overrides = ['frightened']; // Assuming 'frightened' is the ID of the Frightened status
+    }
+    return effectData;
+  });
 
   // Directly assign the mapped array to CONFIG.statusEffects, overwriting the defaults
   CONFIG.statusEffects = customEffects;
