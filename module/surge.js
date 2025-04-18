@@ -338,6 +338,36 @@ const chilledEffectData = {
   flags: { surge: {} }, // Initialize surge flags
 };
 
+// --- Active Effect Data for Frozen ---
+const frozenEffectData = {
+  name: 'Frozen', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/frozen.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until removed
+  disabled: false, // Explicitly enabled
+  changes: [
+    // Override movement value
+    {
+      key: 'system.passives.movement.value', // CONFIRMED PATH
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: '0',
+      priority: 50, // High priority for movement
+    },
+    // Flag to indicate the frozen state
+    {
+      key: 'flags.surge.frozen',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: `<p><strong>Incapacitated:</strong> Unable to take actions or speak (GM Adjudicated).</p>
+                <p><strong>Movement:</strong> 0</p>
+                <p><strong>Damage:</strong> Takes 1d6 damage at start of turn (unless thawing). Takes 1 damage per foot moved involuntarily (GM Adjudicated).</p>
+                <p><strong>Shatter:</strong> Taking lethal damage shatters the creature (GM Adjudicated).</p>
+                <p><strong>Thawing:</strong> Heat source within 5ft removes Frozen at start of *next* turn (GM Adjudicated - disable effect before turn starts to prevent damage). Gains Chilled after thawing.</p>`,
+  flags: { surge: {} },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -1733,6 +1763,56 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
       // await actor.unsetFlag("surge", "burning");
     }
   } // --- End Burning Handling --
+
+  // --- Handle Frozen Condition Damage ---
+  // Check using the flag set by 'changes' array
+  const isFrozen = actor.flags?.surge?.frozen === true;
+  console.log(`SURGE | Checking Frozen status for ${actor.name}: ${isFrozen}`);
+
+  if (isFrozen) {
+    // Find the specific *enabled* Frozen effect
+    const frozenEffect = actor.effects.find(
+      (e) =>
+        e.changes.some((c) => c.key === 'flags.surge.frozen') && !e.disabled
+    );
+    // Alt find: const frozenEffect = actor.effects.find(e => e.flags?.surge?.frozen === true && !e.disabled);
+
+    if (frozenEffect) {
+      console.log(`SURGE | Found ENABLED Frozen effect. Applying 1d6 damage.`);
+      try {
+        const damageRoll = await new Roll('1d6').evaluate();
+        damageRoll.toMessage({
+          speaker: ChatMessage.getSpeaker({ alias: 'Frozen State' }),
+          flavor: `Damage taken by ${actor.name}`,
+        });
+
+        const damageTaken = damageRoll.total;
+        console.log(`SURGE | Applying ${damageTaken} frozen damage.`);
+
+        // Apply damage
+        const currentHp = actor.system.passives.hp.value;
+        if (typeof currentHp === 'number') {
+          const newHp = Math.max(0, currentHp - damageTaken);
+          await actor.update({ 'system.passives.hp.value': newHp });
+          console.log(`SURGE | ${actor.name} HP updated to ${newHp}.`);
+        } else {
+          /* Error log */
+        }
+      } catch (err) {
+        console.error(
+          `SURGE | Failed during Frozen damage for ${actor.name}:`,
+          err
+        );
+        ui.notifications.error(
+          `Error applying frozen effect damage for ${actor.name}.`
+        );
+      }
+    } else {
+      console.log(
+        `SURGE | Actor ${actor.name} is Frozen, but the effect is disabled (likely thawing). Skipping damage.`
+      );
+    }
+  } // --- End Frozen Handling ---
 }
 
 /**
