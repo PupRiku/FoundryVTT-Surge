@@ -23,6 +23,7 @@
 - Implemented "Flammable" condition (doubles Burning damage via hook check; other sources GM adjudicated).
 - Implemented basic "Frightened" condition (sets flag, stores source UUID via macro; action restriction GM adjudicated).
 - Implemented "Chilled" condition (applies 1 damage per foot moved via `updateToken` hook; macro resets duration on re-application).
+- Implemented "Invisible" condition (sets flag, provides +6 Guile bonus via `_onSkillRoll` check; perception contest and token visibility GM adjudicated).
 
 ### 🐛 Bug Fixes
 
@@ -32,15 +33,15 @@
 - Resolved `Assignment to constant variable` error in Burning/Flammable logic.
 - Fixed effect toggle initial state display by adding CSS for `.effect-control.active`.
 - Fixed effect toggle causing visual disappearance by using `actor.effects` instead of potentially buggy `actor.appliedEffects` in sheet template loop.
+- Fixed `ReferenceError` in `_onSkillRoll` by ensuring consistent variable naming (`baseModifiers`).
 
 ### 🔧 Maintenance
 
 - Refactored Status Effect registration to be handled programmatically in `surge.js`'s `init` hook, replacing default effects.
-- Updated macros ("Apply Crushed", "Apply Burning") to use Foundry `Dialog` or add necessary checks (Flame Resistance).
-- Updated "Apply Confused" macro to automatically remove the "Frightened" condition.
-- Added workaround logic for apparent core Foundry VTT bug (as of v12.331) where 1-round duration effects do not auto-expire ("Helpless" duration reset). Noted similar issue affects Chilled expiry.
+- Updated macros to use Foundry `Dialog` for input where needed ("Crushed") or add necessary checks (Flame Resistance, Confused removal of Frightened).
+- Added workaround logic for apparent core Foundry VTT bug (as of v12.331) where 1-round duration effects do not auto-expire ("Helpless" / Chilled duration reset / manual removal needed).
 - Updated Active Effect flag reading logic for `crushSeverity` to read from the effect's flags (`effect.flags`).
-- Added debug logging to various functions (recommend removing before release).
+- Added debug logging to various functions (recommend removing before final release).
 
 ## [0.5.1] - 2025-04-14
 
