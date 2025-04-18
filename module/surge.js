@@ -368,6 +368,47 @@ const frozenEffectData = {
   flags: { surge: {} },
 };
 
+// --- Active Effect Data for Insulated ---
+const insulatedEffectData = {
+  name: 'Insulated', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/insulated.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Assume permanent
+  disabled: false,
+  changes: [
+    // Flag to indicate the condition is active
+    {
+      key: 'flags.surge.insulated',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: `<p>Immune to Chilled status effect.</p>
+                <p>Removes Frozen condition at start of turn.</p>
+                <p>Immune to natural cold damage and School of Ice spells (GM Adjudicated).</p>`,
+  flags: { surge: {} },
+};
+
+// --- Active Effect Data for Invisible ---
+const invisibleEffectData = {
+  name: 'Invisible', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/invisible.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Assume indefinite until removed
+  disabled: false,
+  changes: [
+    // Flag to indicate the condition is active
+    {
+      key: 'flags.surge.invisible',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description:
+    '<p>Cannot be perceived without successful contested INT vs. Guile roll (GM Adjudicated).</p><p>Gains +6 to Guile rolls related to stealth.</p><p>GM should manually toggle token visibility.</p>',
+  flags: { surge: {} },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -710,6 +751,7 @@ export class SurgeCharacterSheet extends ActorSheet {
   /**
    * Handle clicking on a skill label to roll it.
    * Checks for Shift/Ctrl keys for modified rolls (e.g., Melee Attack/Defense).
+   * Includes bonus for Invisible (Guile) and passes modifiers.
    * @param {Event} event The triggering click event
    * @private
    */
@@ -725,94 +767,107 @@ export class SurgeCharacterSheet extends ActorSheet {
       const isShift = event.shiftKey;
       const isCtrl = event.ctrlKey || event.metaKey;
 
-      // Determine primary attribute possibly affected by penalties related to this skill
-      // Example: Guile uses DEX penalties, Martial doesn't seem linked explicitly?
+      // Determine primary attribute possibly affected by equipment penalties
       let primaryAttributeKey = null;
       if (skillKey === 'guile' || skillKey === 'marksmanship')
-        primaryAttributeKey = 'dex'; // Apply DEX penalties to Guile? Check rules. Assume YES for now.
-      // if (skillKey === 'marksmanship') primaryAttributeKey = 'dex'; // Apply DEX penalties to Marksmanship? Assume YES.
+        primaryAttributeKey = 'dex';
 
-      // Get base penalties related to this skill AND its potential base attribute
-      let basePenalties = this._getEquippedPenalties(
+      // --- Get base modifiers (equipment penalties) ---
+      // Ensure we use the same variable name consistently! Let's use 'baseModifiers'.
+      let baseModifiers = this._getEquippedPenalties(
         primaryAttributeKey,
         skillKey
       );
+      // Ensure it's always an array, even if _getEquippedPenalties returns null/undefined
+      if (!Array.isArray(baseModifiers)) {
+        baseModifiers = [];
+      }
 
+      // --- Check for Invisible Bonus ---
+      const isInvisible = this.actor.flags?.surge?.invisible === true;
+      if (isInvisible && skillKey === 'guile') {
+        console.log(`SURGE | Actor is Invisible. Adding +6 Guile bonus.`);
+        baseModifiers.push({ value: 6, label: 'Invisible (Stealth)' });
+      }
+      // --- End Invisible Check ---
+
+      console.log(
+        `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Modifiers Found (incl. Invisible):`,
+        JSON.parse(JSON.stringify(baseModifiers))
+      );
+
+      // --- Handle skill-specific logic ---
       if (skillKey === 'martial') {
         if (isShift) {
           // Melee Weapon Attack
-          // --- Check if Crushed ---
-          if (this.actor.flags?.surge?.crushed === true) {
-            ui.notifications.warn(
-              `${this.actor.name} cannot make melee attacks while Crushed.`
-            );
-            return; // Stop this specific action
-          }
-          // --- End Check ---
-
-          const strLevel = actorAttributes.str?.value ?? 0;
-          // Combine penalties with attack bonus
-          let modifiers = [
-            ...basePenalties, // Add general penalties first (e.g. if shield penalizes martial?)
-            { value: strLevel, label: 'STR Level' },
+          let attackBonus = [
+            { value: actorAttributes.str?.value ?? 0, label: 'STR Level' },
           ];
-          console.log(
-            `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
-            JSON.parse(JSON.stringify(basePenalties))
-          ); // Add this log
+          // Combine baseModifiers (penalties/invis) with attack bonus
+          let finalModifiers = [...baseModifiers, ...attackBonus].filter(
+            (m) => m.value !== 0
+          );
           await this._performRoll(
             level,
             `Melee Weapon Attack (${skill.label})`,
-            modifiers
-          );
+            finalModifiers,
+            'str'
+          ); // Pass attr key
         } else if (isCtrl) {
-          // Melee Defense (handles penalties internally)
+          // Melee Defense
+          // Assuming _rollMeleeDefense handles its own base modifiers internally if needed
           await this._rollMeleeDefense();
         } else {
-          // Basic Check
-          console.log(
-            `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
-            JSON.parse(JSON.stringify(basePenalties))
-          ); // Add this log
-          await this._performRoll(level, `${skill.label} Check`, basePenalties); // Pass relevant penalties
-        }
-      } else if (skillKey === 'mystic') {
-        if (isCtrl) {
-          // Magic Defense (handles penalties internally)
-          await this._rollMagicDefense();
-        } else {
-          // Basic Check
-          // Does INT penalty affect Mystic? Assume no for now unless rules state otherwise.
-          let mysticPenalties = this._getEquippedPenalties(null, skillKey); // Only check skill penalty
-          console.log(
-            `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
-            JSON.parse(JSON.stringify(basePenalties))
-          ); // Add this log
+          // Basic Martial Check
+          // Use baseModifiers directly (already filtered if needed by _getEquippedPenalties or _performRoll)
           await this._performRoll(
             level,
             `${skill.label} Check`,
-            mysticPenalties
-          );
+            baseModifiers,
+            'str'
+          ); // Pass attr key
+        }
+      } else if (skillKey === 'mystic') {
+        if (isCtrl) {
+          // Magic Defense
+          // Assuming _rollMagicDefense handles its own base modifiers internally if needed
+          await this._rollMagicDefense();
+        } else {
+          // Basic Mystic Check
+          // Get only mystic-specific penalties, don't include invis bonus here unless intended
+          let mysticPenalties = this._getEquippedPenalties(null, skillKey);
+          if (!Array.isArray(mysticPenalties)) {
+            mysticPenalties = [];
+          }
+          await this._performRoll(
+            level,
+            `${skill.label} Check`,
+            mysticPenalties,
+            'int'
+          ); // Pass attr key
         }
       } else {
-        if (this.actor.flags?.surge?.crushed === true) {
-          ui.notifications.warn(
-            `${this.actor.name} cannot perform basic ${skill.label} checks while Crushed.`
-          );
-          return;
-        }
-        // Other skill basic checks
-        console.log(
-          `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Penalties Found:`,
-          JSON.parse(JSON.stringify(basePenalties))
-        ); // Add this log
-        await this._performRoll(level, `${skill.label} Check`, basePenalties); // Pass relevant penalties
+        // --- Other skill basic checks (Handles Guile, Marksmanship, etc.) ---
+        // This block uses baseModifiers, which now includes the Invisible bonus for Guile
+        // Also determine attributeKey for _performRoll if possible/needed
+        let associatedAttrKey = null;
+        if (skillKey === 'guile' || skillKey === 'marksmanship')
+          associatedAttrKey = 'dex';
+        // Add other skill->attribute mappings if relevant for _performRoll context
+
+        // Use baseModifiers directly
+        await this._performRoll(
+          level,
+          `${skill.label} Check`,
+          baseModifiers,
+          associatedAttrKey
+        ); // <<< Ensure 'baseModifiers' is used here
       }
     } else {
       console.error(`SURGE | Could not find skill data for key: ${skillKey}`);
       ui.notifications.warn(`Skill data not found for key: ${skillKey}`);
     }
-  }
+  } // End _onSkillRoll
 
   /**
    * Handle clicking the edit icon on an item row.
@@ -1457,6 +1512,40 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
 
   console.log(`SURGE | Turn Start for: ${actor.name}`);
 
+  // --- Handle Insulation removing Frozen ---
+  const isInsulated = actor.flags?.surge?.insulated === true;
+  if (isInsulated) {
+    console.log(
+      `SURGE | ${actor.name} is Insulated. Checking for Frozen effect...`
+    );
+    // Find the Frozen effect (use flag or name)
+    const frozenEffect = actor.effects.find(
+      (e) =>
+        e.changes.some((c) => c.key === 'flags.surge.frozen') && !e.disabled
+    );
+    // Alt find: const frozenEffect = actor.effects.find(e => e.name === "Frozen" && !e.disabled);
+
+    if (frozenEffect) {
+      console.log(
+        `SURGE | Found Frozen effect on Insulated actor. Removing Frozen.`
+      );
+      try {
+        await frozenEffect.delete();
+        ui.notifications.info(
+          `${actor.name} is no longer Frozen due to Insulation.`
+        );
+      } catch (err) {
+        console.error(
+          `SURGE | Failed to remove Frozen effect for Insulated actor ${actor.name}:`,
+          err
+        );
+      }
+    } else {
+      console.log(`SURGE | No active Frozen effect found to remove.`);
+    }
+  }
+  // --- END Insulation/Frozen Check ---
+
   // --- Handle Confused Condition ---
   const isConfused = actor.flags?.surge?.confused === true;
   if (isConfused) {
@@ -2032,6 +2121,10 @@ Hooks.once('init', () => {
     // Add overrides specifically for 'flame-resistant'
     if (effect.id === 'flame-resistant') {
       effectData.overrides = ['surge-burning']; // Prevent 'surge-burning' status/effect
+    }
+    // Add overrides specifically for 'insulated'
+    if (effect.id === 'insulated') {
+      effectData.overrides = ['chilled']; // Prevent 'chilled' status/effect
     }
     return effectData;
   });
