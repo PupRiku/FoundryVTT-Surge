@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.6.0] - 2025-04-17
+## [0.6.0] - 2025-04-18
 
 ### ✨ Features
 
@@ -22,22 +22,24 @@
 - Implemented "Flame Resistant" condition (prevents Burning application via macro check; other immunities GM adjudicated).
 - Implemented "Flammable" condition (doubles Burning damage via hook check; other sources GM adjudicated).
 - Implemented basic "Frightened" condition (sets flag, stores source UUID via macro; action restriction GM adjudicated).
+- Implemented "Chilled" condition (applies 1 damage per foot moved via `updateToken` hook; macro resets duration on re-application).
 
 ### 🐛 Bug Fixes
 
 - Resolved Foundry VTT deprecation warnings for `StatusEffectConfig#label`/`icon`, `flags.core.statusId`, `Roll#evaluate({async})`, and `canvas.grid.measureDistance`.
 - Fixed Active Effect controls (toggle/edit/delete) on the Effects tab by implementing custom handlers in `SurgeCharacterSheet`.
-- Fixed `target.center` errors during Confused target finding by iterating combatants and adding checks.
+- Fixed `target.center` / `prior` coordinate issues during Confused/Chilled target finding/movement logic by refining target iteration and using `preUpdateToken` hook / `change` object data.
 - Resolved `Assignment to constant variable` error in Burning/Flammable logic.
 - Fixed effect toggle initial state display by adding CSS for `.effect-control.active`.
 - Fixed effect toggle causing visual disappearance by using `actor.effects` instead of potentially buggy `actor.appliedEffects` in sheet template loop.
 
 ### 🔧 Maintenance
 
-- Refactored Status Effect registration to be handled programmatically in `surge.js` `init` hook, replacing default effects.
-- Updated macros to use Foundry `Dialog` for input where needed ("Crushed").
+- Refactored Status Effect registration to be handled programmatically in `surge.js`'s `init` hook, replacing default effects.
+- Updated macros ("Apply Crushed", "Apply Burning") to use Foundry `Dialog` or add necessary checks (Flame Resistance).
 - Updated "Apply Confused" macro to automatically remove the "Frightened" condition.
-- Added workaround logic for core Foundry bug preventing automatic expiry of 1-round duration effects ("Helpless" duration reset).
+- Added workaround logic for apparent core Foundry VTT bug (as of v12.331) where 1-round duration effects do not auto-expire ("Helpless" duration reset). Noted similar issue affects Chilled expiry.
+- Updated Active Effect flag reading logic for `crushSeverity` to read from the effect's flags (`effect.flags`).
 - Added debug logging to various functions (recommend removing before release).
 
 ## [0.5.1] - 2025-04-14

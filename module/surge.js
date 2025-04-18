@@ -122,6 +122,12 @@ const SURGE_STATUS_EFFECTS = [
     label: 'Burning',
     icon: 'systems/surge/assets/icons/conditions/burning.svg',
   },
+  {
+    _id: 'Ddwm4omh9NRf63gh',
+    id: 'chilled',
+    label: 'Chilled',
+    icon: 'systems/surge/assets/icons/conditions/chilled.svg',
+  },
 ];
 
 // --- Active Effect Data for Blinded ---
@@ -309,6 +315,27 @@ const frightenedEffectData = {
       // We will try to add frightenedSourceUuid via the macro
     },
   },
+};
+
+// --- Active Effect Data for Chilled ---
+const chilledEffectData = {
+  name: 'Chilled', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/chilled.svg', // Match icon path
+  // Set duration for 3 rounds (won't auto-expire due to likely core bug)
+  duration: { rounds: 3, turns: null, seconds: null },
+  disabled: false,
+  changes: [
+    // Flag to indicate the condition is active
+    {
+      key: 'flags.surge.chilled',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description:
+    '<p>Takes 1 damage per foot moved.</p><p>Expires after 3 rounds (Manual removal likely needed due to core bug). Removed if near heat source (GM discretion).</p>',
+  flags: { surge: {} }, // Initialize surge flags
 };
 
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
@@ -1708,12 +1735,187 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
   } // --- End Burning Handling --
 }
 
-// Register the combat turn handler hook once the game is ready
+/**
+ * Capture token position just before it updates, if it's about to move.
+ * Stores the position temporarily on the canvas Token object.
+ * @param {TokenDocument} tokenDocument The TokenDocument being updated.
+ * @param {object} change Object containing the proposed changes.
+ * @param {object} options Additional options which trigger this update.
+ * @param {string} userId The ID of the User triggering the update.
+ */
+function handlePreUpdateToken(tokenDocument, change, options, userId) {
+  // Check if x or y coordinates are part of the proposed change
+  if (change?.x !== undefined || change?.y !== undefined) {
+    // Get the associated Token object on the canvas
+    const tokenObject = canvas.tokens.get(tokenDocument.id);
+    // Only proceed if the canvas object exists and doesn't already have the temp flag
+    // (This prevents redundant saves if multiple preUpdate hooks fire)
+    if (tokenObject && !tokenObject._chilledLastPos) {
+      // Store the CURRENT coordinates before they change
+      const currentPos = { x: tokenDocument.x, y: tokenDocument.y };
+      tokenObject._chilledLastPos = currentPos;
+      console.log(
+        `SURGE DEBUG (handlePreUpdateToken) | Storing pre-move position for ${tokenDocument.name}:`,
+        currentPos
+      );
+    }
+  }
+}
+
+/**
+ * Handle Token movement AFTER update to apply Chilled damage.
+ * Reads starting position from a temporary flag set by handlePreUpdateToken.
+ * Reads new position preferentially from the 'change' object.
+ * @param {TokenDocument} tokenDocument The TokenDocument that was updated.
+ * @param {object} change Object containing the changes made.
+ * @param {object} options Additional options which trigger this update.
+ * @param {string} userId The ID of the User triggering the update.
+ */
+async function handleTokenUpdate(tokenDocument, change, options, userId) {
+  // We still only care if x or y *actually* changed in this update batch
+  if (change?.x === undefined && change?.y === undefined) return;
+
+  const tokenObject = canvas.tokens.get(tokenDocument.id); // Get Canvas Token Object
+  const actor = tokenDocument.actor;
+
+  // Check if actor exists, is Chilled, and has the temp position flag from preUpdate
+  if (
+    !actor ||
+    !tokenObject ||
+    actor.flags?.surge?.chilled !== true ||
+    !tokenObject._chilledLastPos
+  ) {
+    if (tokenObject?._chilledLastPos) delete tokenObject._chilledLastPos; // Clean up flag if we exit early
+    return;
+  }
+
+  console.log(
+    `SURGE DEBUG (handleTokenUpdate) | Actor: ${actor.name}, Is Chilled: true. Processing move.`
+  );
+
+  // Get the starting position stored by the preUpdate hook
+  const startPos = tokenObject._chilledLastPos;
+  console.log(
+    `SURGE DEBUG (handleTokenUpdate) | Start Coords from temp flag:`,
+    startPos
+  );
+
+  // --- FIX: Get new position preferentially from the 'change' object ---
+  // Fall back to tokenDocument only if 'change' doesn't have the coord (shouldn't happen if position changed)
+  const newX = change?.x ?? tokenDocument.x;
+  const newY = change?.y ?? tokenDocument.y;
+  console.log(
+    `SURGE DEBUG (handleTokenUpdate) | New Coords (from change/doc): x=${newX}, y=${newY}`
+  ); // Log coords used
+
+  // IMPORTANT: Clean up the temporary flag *immediately* after reading startPos
+  delete tokenObject._chilledLastPos;
+  console.log(`SURGE DEBUG (handleTokenUpdate) | Removed temp position flag.`);
+
+  // Check if positions are valid numbers before proceeding
+  if (
+    typeof startPos?.x !== 'number' ||
+    typeof startPos?.y !== 'number' ||
+    typeof newX !== 'number' ||
+    typeof newY !== 'number'
+  ) {
+    console.warn(
+      `SURGE | Chilled: Invalid coordinates for distance calculation. Start:`,
+      startPos,
+      `End:`,
+      { x: newX, y: newY }
+    );
+    return;
+  }
+
+  // --- Calculate Distance Moved ---
+  // Ensure start and end points are different before calculating
+  if (startPos.x === newX && startPos.y === newY) {
+    console.log(
+      `SURGE DEBUG (handleTokenUpdate) | Start and end positions are the same. No distance moved.`
+    );
+    return;
+  }
+
+  try {
+    console.log(`SURGE DEBUG (handleTokenUpdate) | Calculating path...`);
+    const path = canvas.grid.measurePath([
+      { x: startPos.x, y: startPos.y },
+      { x: newX, y: newY },
+    ]);
+    const distanceMoved = path.distance;
+    console.log(
+      `SURGE DEBUG (handleTokenUpdate) | Distance Moved: ${distanceMoved}`
+    );
+
+    const damage = Math.max(0, Math.round(distanceMoved)); // 1 damage per foot
+    console.log(
+      `SURGE DEBUG (handleTokenUpdate) | Calculated Damage: ${damage}`
+    );
+
+    if (damage > 0) {
+      console.log(
+        `SURGE | ${actor.name} moved ${distanceMoved.toFixed(
+          1
+        )}ft while Chilled. Applying ${damage} damage.`
+      );
+      const currentHp = actor.system.passives.hp.value;
+      console.log(`SURGE DEBUG (handleTokenUpdate) | Current HP: ${currentHp}`);
+
+      if (typeof currentHp === 'number') {
+        const newHp = Math.max(0, currentHp - damage);
+        console.log(
+          `SURGE DEBUG (handleTokenUpdate) | New HP will be: ${newHp}`
+        );
+        await actor.update({ 'system.passives.hp.value': newHp });
+        console.log(
+          `SURGE DEBUG (handleTokenUpdate) | Actor HP update called.`
+        );
+
+        // Optional Scrolling Text
+        if (tokenObject) {
+          canvas.interface.createScrollingText(
+            tokenObject.center,
+            `-${damage} Chilled!`,
+            {
+              anchor: CONST.TEXT_ANCHOR_POINTS.CENTER,
+              fontSize: 32,
+              fill: '#ADD8E6',
+              stroke: 0x000000,
+              strokeThickness: 2,
+              jitter: 0.25,
+            }
+          );
+        }
+      } else {
+        console.error(`SURGE | Chilled: Could not get valid current HP...`);
+      }
+    } else {
+      console.log(
+        `SURGE DEBUG (handleTokenUpdate) | Damage is 0, no update needed.`
+      );
+    }
+  } catch (err) {
+    console.error(
+      `SURGE | Chilled: Error calculating distance or applying damage for ${actor.name}:`,
+      err
+    );
+  }
+}
+
 Hooks.once('ready', () => {
+  // Register the combat turn handler hook once the game is ready
   Hooks.on('updateCombat', handleCombatTurnStart);
   console.log(
     'SURGE! | Registered combat turn handler for Confused condition.'
   );
+
+  Hooks.on('preUpdateToken', handlePreUpdateToken); // Add listener for preUpdate
+  console.log('SURGE! | Registered token pre-update handler for Chilled.');
+
+  // Register token update handler (for Chilled damage on move)
+  Hooks.on('updateToken', handleTokenUpdate);
+  console.log('SURGE! | Registered token update handler for Chilled.');
 });
 
 // --- System Initialization ---
