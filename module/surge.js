@@ -537,6 +537,12 @@ const proneEffectData = {
       value: 'true',
       priority: 10,
     },
+    {
+      key: 'system.passives.movement.value', // Is this path still correct?
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, // Mode 5
+      value: '0', // Value is string "0"
+      priority: 50,
+    },
   ],
   description: `<p><strong>Dexterity Checks:</strong> Automatically fail.</p>
                 <p><strong>Defense:</strong> Incapable of dodging/blocking (GM Adjudicated based on flag).</p>
@@ -689,6 +695,29 @@ const poisonedDeadlyEffectData = {
       poisonDeadlyTurns: 0, // Start counter at 0 (turn 1 will be the first increment)
       // startRound: null, // Macro will set these if in combat
       // startTurn: null
+    },
+  },
+};
+
+// --- Active Effect Data for Stunned ---
+const stunnedEffectData = {
+  name: 'Stunned',
+  img: 'systems/surge/assets/icons/conditions/stunned.svg',
+  duration: { seconds: null, rounds: null, turns: null },
+  disabled: false,
+  changes: [
+    {
+      key: 'flags.surge.stunned',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: '<p>...</p>', // Keep existing description
+  // Initialize flags object structure
+  flags: {
+    surge: {
+      stunnedLastHp: null, // Will be set by macro on application
     },
   },
 };
@@ -1826,6 +1855,97 @@ export class SurgeCharacterSheet extends ActorSheet {
 } // End of SurgeCharacterSheet class
 
 /**
+ * Handle Actor updates AFTER they occur to remove Stunned if HP decreased.
+ * Uses HP stored on the effect flag from when it was applied/last checked.
+ * @param {Actor} actorDocument The Actor document THAT WAS updated.
+ * @param {object} change Object containing the changes made in this update.
+ * @param {object} options Additional options which triggered this update.
+ * @param {string} userId The ID of the User triggering the update.
+ */
+async function handleActorUpdate(actorDocument, change, options, userId) {
+  // Check if HP value actually changed in this specific update
+  const newHp = change?.system?.passives?.hp?.value;
+  if (typeof newHp !== 'number') {
+    // If HP wasn't part of *this specific change object*, exit.
+    // We need to check the effect regardless in case HP changed previously
+    // and we need to update the stored HP flag. Let's proceed.
+  }
+
+  // Find any active Stunned effect first
+  // Check flag set by 'changes', ensure not disabled
+  const stunnedEffect = actorDocument.effects.find(
+    (e) => e.changes.some((c) => c.key === 'flags.surge.stunned') && !e.disabled
+  );
+
+  // Only proceed if the actor currently HAS an active Stunned effect
+  if (!stunnedEffect) {
+    // Clean up potentially orphaned flag if needed? Not strictly necessary.
+    return;
+  }
+
+  console.log(
+    `SURGE DEBUG (handleActorUpdate) | Actor ${actorDocument.name} is Stunned. Checking HP change.`
+  );
+
+  // Get the HP value stored LAST time we checked/applied the effect
+  const lastHp = stunnedEffect.flags?.surge?.stunnedLastHp;
+  // Get the CURRENT HP value after the update completed
+  const currentHp = actorDocument.system.passives.hp.value;
+
+  console.log(
+    `SURGE DEBUG (handleActorUpdate) | Last Stored HP: ${lastHp}, Current HP: ${currentHp}`
+  );
+
+  // Check if we have valid numbers and if HP decreased
+  if (
+    typeof lastHp === 'number' &&
+    typeof currentHp === 'number' &&
+    currentHp < lastHp
+  ) {
+    // --- HP DECREASED - Remove Stunned ---
+    console.log(
+      `SURGE | ${actorDocument.name} took damage while Stunned (HP ${lastHp} -> ${currentHp}). Removing Stunned effect.`
+    );
+    try {
+      await stunnedEffect.delete();
+      console.log(
+        `SURGE | Successfully removed Stunned effect from ${actorDocument.name}.`
+      );
+      ui.notifications.info(
+        `${actorDocument.name} is no longer Stunned after taking damage.`
+      );
+    } catch (err) {
+      console.error(
+        `SURGE | Failed to delete Stunned effect for ${actorDocument.name}:`,
+        err
+      );
+    }
+    // --- End Removal ---
+  } else if (typeof currentHp === 'number' && currentHp !== lastHp) {
+    // --- HP CHANGED but DID NOT DECREASE (or lastHp was invalid) ---
+    // Update the stored HP on the effect to the new current value
+    // This handles healing or manual edits that didn't trigger removal
+    console.log(
+      `SURGE DEBUG (handleActorUpdate) | HP changed but did not decrease (or lastHp missing). Updating stored HP on Stunned effect to ${currentHp}.`
+    );
+    try {
+      await stunnedEffect.update({ 'flags.surge.stunnedLastHp': currentHp });
+    } catch (err) {
+      console.error(
+        `SURGE | Failed to update stunnedLastHp flag for ${actorDocument.name}:`,
+        err
+      );
+    }
+    // --- End Stored HP Update ---
+  } else {
+    console.log(
+      `SURGE DEBUG (handleActorUpdate) | HP did not change relevantly (${currentHp} vs ${lastHp}). Stunned persists.`
+    );
+  }
+  console.log(`SURGE DEBUG (handleActorUpdate) | --- Hook Finished ---`);
+}
+
+/**
  * Handles the start of a combatant's turn to check for Confused behavior.
  * @param {Combat} combat The Combat document being updated.
  * @param {object} changed Object describing the changes made.
@@ -2622,6 +2742,9 @@ Hooks.once('ready', () => {
   // Register token update handler (for Chilled damage on move)
   Hooks.on('updateToken', handleTokenUpdate);
   console.log('SURGE! | Registered token update handler for Chilled.');
+
+  Hooks.on('updateActor', handleActorUpdate);
+  console.log('SURGE! | Registered actor update handler for Stunned removal.');
 });
 
 // --- System Initialization ---
