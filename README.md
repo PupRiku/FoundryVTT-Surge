@@ -52,6 +52,7 @@ Foundry will download and install the system. You can then create a new world us
 ## Planned Features / To-Do
 
 - **Status Effects / Conditions:** Implement system (likely Active Effects) for tracking and applying effects like Bleeding, Broken, etc., triggered by attacks or other actions. Implement "Patch Up" action functionality.
+- **Death and Dying:** Implement death saving throws system for when a player reaches 0 Hit Points.
 - **Item Sheet Enhancements:**
   - Create UI for easily editing array data (Damage Reduction, Attribute/Skill Penalties).
   - Add specific fields/layouts for remaining item types (Gear, Tool, Medicine, Ammo, Plate, etc.).
