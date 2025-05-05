@@ -429,6 +429,127 @@ const muteEffectData = {
   flags: { surge: {} },
 };
 
+// --- Active Effect Data for Paralyzed ---
+const paralyzedEffectData = {
+  name: 'Paralyzed', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/paralyzed.svg', // Match icon path
+  duration: { seconds: 86400, rounds: null, turns: null }, // 24 hours
+  disabled: false,
+  changes: [
+    // Override movement value
+    {
+      key: 'system.passives.movement.value', // CONFIRMED PATH
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: '0',
+      priority: 50, // High priority for movement
+    },
+    // Flag to indicate the paralyzed state (for action restriction - GM adjudicated)
+    {
+      key: 'flags.surge.paralyzed',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+    // Flag to indicate inability to defend (for future mechanics / GM ruling)
+    {
+      key: 'flags.surge.paralyzedHelpless',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: `<p><strong>Motionless:</strong> Movement set to 0.</p>
+                <p><strong>Incapacitated:</strong> Unable to take actions (except speak/cast) (GM Adjudicated).</p>
+                <p><strong>Defenseless:</strong> Unable to defend against attacks (Helpless flag set; mechanical effect GM Adjudicated or via future attack implementation).</p>
+                <p><strong>Duration:</strong> 24 hours (unless cured).</p>`,
+  flags: { surge: {} }, // Initialize surge flags
+};
+
+// --- Active Effect Data for Restrained ---
+const restrainedEffectData = {
+  name: 'Restrained', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/restrained.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until removed
+  disabled: false,
+  changes: [
+    // Override movement value
+    {
+      key: 'system.passives.movement.value', // CONFIRMED PATH
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: '0',
+      priority: 50, // High priority for movement
+    },
+    // Flag to indicate the restrained state for JS checks
+    {
+      key: 'flags.surge.restrained',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description:
+    "<p><strong>Movement:</strong> 0</p><p><strong>Dexterity Checks:</strong> Automatically fail.</p><p>Can take other actions. Can attempt 'Break Free' action (specifics TBD) to remove.</p>",
+  flags: { surge: {} },
+};
+
+// --- Active Effect Data for Prone ---
+const proneEffectData = {
+  name: 'Prone', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/prone.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until stood up
+  disabled: false,
+  changes: [
+    // Flag to indicate the prone state for JS checks
+    {
+      key: 'flags.surge.prone',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+    // Flag to indicate inability to dodge/block (for GM ruling / future mechanics)
+    {
+      key: 'flags.surge.proneUnableToDefend',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: `<p><strong>Dexterity Checks:</strong> Automatically fail.</p>
+                <p><strong>Defense:</strong> Incapable of dodging/blocking (GM Adjudicated based on flag).</p>
+                <p><strong>Removal:</strong> Requires 1 Action to stand up.</p>`,
+  flags: { surge: {} },
+};
+
+// --- Active Effect Data for Pinned ---
+const pinnedEffectData = {
+  name: 'Pinned', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/pinned.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until Break Free
+  disabled: false,
+  changes: [
+    // Override movement value
+    {
+      key: 'system.passives.movement.value', // CONFIRMED PATH
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: '0',
+      priority: 50,
+    },
+    // Flag to indicate the pinned state for JS checks
+    {
+      key: 'flags.surge.pinned',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: `<p><strong>Prerequisite:</strong> Must be Restrained or Prone.</p>
+                <p><strong>Movement:</strong> 0</p>
+                <p><strong>Actions:</strong> Cannot make physical attacks. Can speak & cast spells.</p>
+                <p><strong>Dexterity Checks:</strong> Automatically fail.</p>
+                <p>Can attempt 'Break Free' action (specifics TBD) to remove.</p>`,
+  flags: { surge: {} },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -750,6 +871,33 @@ export class SurgeCharacterSheet extends ActorSheet {
         await this._rollRangedDefense();
       } else {
         // Basic Attribute Check
+        const isRestrained = this.actor.flags?.surge?.restrained === true;
+        const isProne = this.actor.flags?.surge?.prone === true;
+        const isPinned = this.actor.flags?.surge?.pinned === true;
+        let autoFailReason = null;
+
+        if (attributeKey === 'dex') {
+          if (isRestrained) autoFailReason = 'Restrained';
+          else if (isProne) autoFailReason = 'Prone';
+          else if (isPinned) autoFailReason = 'Pinned';
+        }
+
+        if (autoFailReason) {
+          const label = `${attribute.label} Check`; // Get label for message
+          const messageContent = `${this.actor.name} is ${autoFailReason} and automatically fails the ${label}.`;
+          ChatMessage.create({
+            user: game.user.id,
+            speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+            content: messageContent,
+          });
+          ui.notifications.warn(
+            `${this.actor.name} automatically failed ${label} due to being ${autoFailReason}.`
+          );
+          console.log(
+            `SURGE | ${this.actor.name} auto-failed DEX attribute check due to ${autoFailReason}.`
+          );
+          return; // Stop before performing the roll
+        }
         let modifiers = this._getEquippedPenalties(attributeKey, null); // <<< Get penalties for this attribute
         await this._performRoll(
           level,
@@ -819,6 +967,18 @@ export class SurgeCharacterSheet extends ActorSheet {
       // --- Handle skill-specific logic ---
       if (skillKey === 'martial') {
         if (isShift) {
+          if (this.actor.flags?.surge?.crushed === true) {
+            ui.notifications.warn(
+              `${this.actor.name} cannot make melee attacks while Crushed.`
+            );
+            return;
+          }
+          if (this.actor.flags?.surge?.pinned === true) {
+            ui.notifications.warn(
+              `${this.actor.name} cannot make physical attacks while Pinned.`
+            );
+            return;
+          }
           // Melee Weapon Attack
           let attackBonus = [
             { value: actorAttributes.str?.value ?? 0, label: 'STR Level' },
@@ -1035,9 +1195,15 @@ export class SurgeCharacterSheet extends ActorSheet {
    */
   async _onItemAttackRoll(event) {
     event.preventDefault();
-    // --- Check if Crushed ---
+    // --- Check if Crushed or Pinned ---
     if (this.actor.flags?.surge?.crushed === true) {
       ui.notifications.warn(`${this.actor.name} cannot attack while Crushed.`);
+      return; // Stop the function
+    }
+    if (this.actor.flags?.surge?.pinned === true) {
+      ui.notifications.warn(
+        `${this.actor.name} cannot make physical attacks while Pinned.`
+      );
       return; // Stop the function
     }
     // --- End Check ---
