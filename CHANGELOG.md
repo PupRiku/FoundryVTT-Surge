@@ -1,61 +1,58 @@
 # Changelog
 
-## [0.6.0] - 2025-05-05
+## [0.7.0] - 2025-05-05
 
 ### ✨ Features
 
-- Added Status Effect icons for all defined SURGE! conditions, selectable via the Token HUD.
+- Added Status Effect icons for all defined SURGE! conditions, registered programmatically and replacing Foundry defaults.
 - Added "Effects" tab to the Character Sheet to display and manage Active Effects.
-- Implemented mechanics for "Blinded" condition (die reduction / auto-fail via `_performRoll` check).
-- Implemented mechanics for "Confused" condition:
-  - Prevents "Frightened" condition via status effect `overrides`.
-  - Applies -2 penalty to INT/CHA attribute rolls via `_performRoll` check.
-  - Handles start-of-turn d6 roll via `updateCombat` hook (posts results, applies/resets temporary Helpless).
-- Implemented core mechanics for "Crushed" condition:
-  - Overrides movement to 0 via Active Effect `changes`.
-  - Prevents attacks via checks in roll handler functions.
-  - Applies damage-per-round based on severity (calculated from weight input in macro) using `updateCombat` hook.
-- Implemented mechanics for "Burning" condition:
-  - Applies escalating d6 damage per turn via `updateCombat` hook and turn counter flag.
-  - Chat message indicates when damage is doubled by Flammable condition.
-- Implemented "Deafened" condition (applies -3 penalty to Magic Defense roll via `_rollMagicDefense` check; perception penalty GM adjudicated).
-- Implemented "Flame Resistant" condition (prevents Burning application via macro check; other immunities GM adjudicated).
-- Implemented "Flammable" condition (doubles Burning damage via hook check; other sources GM adjudicated).
-- Implemented basic "Frightened" condition (sets flag, stores source UUID via macro; action restriction GM adjudicated).
-- Implemented "Chilled" condition (applies 1 damage per foot moved via `updateToken` hook; macro resets duration on re-application).
-- Implemented "Frozen" condition (sets flag, move=0 via AE change, start-of-turn damage via hook w/ GM disable override; other effects GM adjudicated).
-- Implemented "Insulated" condition (sets flag, prevents Chilled application via macro check, removes Frozen via hook; immunities GM adjudicated).
-- Implemented "Invisible" condition (sets flag, provides +6 Guile bonus via `_onSkillRoll` check; perception contest and token visibility GM adjudicated).
-- Implemented "Mute" condition (sets flag; spellcasting prevention deferred, speech GM adjudicated).
-- Implemented "Paralyzed" condition (sets flags for paralyzed/helpless, move=0, duration set; action restriction/defense GM adjudicated).
-- Implemented "Restrained" condition (sets flag, move=0, auto-fails DEX attribute checks via `_onAttributeRoll`).
-- Implemented "Prone" condition (sets flags for prone/defenseless, auto-fails DEX attribute checks via `_onAttributeRoll`; defense/standing GM adjudicated).
-- Implemented "Pinned" condition (requires Restrained/Prone via macro check, sets flag, move=0, prevents physical attacks via JS checks, auto-fails DEX attribute checks via `_onAttributeRoll`).
-- Implemented "Incapacitated" condition (Applies Prone, Move=0, Auto-fails checks, GM handles action restriction).
-- Implemented "Poisoned (Sickness)" condition (applies random Confused/Incapacitated/Paralyzed for random 1d6h duration via macro, prevents stacking).
-- Implemented "Poisoned (Debilitating)" condition (applies random Blinded/Deafened for random 1d6h duration via macro, prevents stacking).
-- Implemented "Poisoned (Damage)" condition (applies 1d6 damage/turn in combat via hook; hourly damage GM adjudicated, prevents stacking).
-- Implemented "Poisoned (Deadly)" condition (5-turn combat timer via hook leads to HP 0 + Incapacitated; prevents stacking).
+- Implemented "Blinded" condition (die reduction / auto-fail via `_performRoll`).
+- Implemented "Confused" condition (Frightened immunity, INT/CHA roll penalty, start-of-turn d6 behavior via hook).
+- Implemented "Crushed" condition (Move=0, attack prevention, damage/round via hook from weight).
+- Implemented "Burning" condition (escalating d6 damage/turn via hook).
+- Implemented "Deafened" condition (Magic Defense penalty; perception GM adjudicated).
+- Implemented "Flame Resistant" condition (Prevents Burning application; immunities GM adjudicated).
+- Implemented "Flammable" condition (Doubles Burning damage; other sources GM adjudicated).
+- Implemented "Frightened" condition (Flag set, source stored via macro; restriction GM adjudicated).
+- Implemented "Chilled" condition (Damage per foot moved via hook, duration reset via macro).
+- Implemented "Frozen" condition (Flag set, Move=0, start-of-turn damage via hook w/ GM disable override; other effects GM adjudicated).
+- Implemented "Insulated" condition (Flag set, prevents Chilled, removes Frozen via hook; immunities GM adjudicated).
+- Implemented "Invisible" condition (Flag set, +6 Guile bonus via `_onSkillRoll`; perception/visibility GM adjudicated).
+- Implemented "Mute" condition (Flag set; spellcasting prevention deferred, speech GM adjudicated).
+- Implemented "Paralyzed" condition (Flags set for paralyzed/helpless, Move=0; restriction/defense GM adjudicated).
+- Implemented "Restrained" condition (Flag set, Move=0, auto-fails DEX attribute checks).
+- Implemented "Prone" condition (Flags set for prone/defenseless, auto-fails DEX attribute checks).
+- Implemented "Pinned" condition (Requires Restrained/Prone, flag set, Move=0, prevents physical attacks, auto-fails DEX attribute checks).
+- Implemented "Incapacitated" condition (Applies Prone, Move=0, Auto-fails checks; action restriction GM adjudicated).
+- Implemented "Poisoned" subtypes:
+  - Sickness (Applies random secondary condition & duration).
+  - Debilitating (Applies random Blinded/Deafened & duration).
+  - Damage (Applies 1d6 damage/turn in combat via hook; hourly GM adjudicated).
+  - Deadly (5-turn combat timer via hook leads to HP 0 + Incapacitated).
+- Implemented "Bleeding" condition (Escalating bonus damage applied to hits via `_performDamageRoll` modification; bonus value updated via hook).
+- Implemented "Broken" condition (Flag set, doubles incoming Physical damage via `_performDamageRoll` modification).
+- Added Compendium pack containing macros for applying conditions
 
 ### 🐛 Bug Fixes
 
-- Resolved Foundry VTT deprecation warnings and API usage issues for V12 (StatusEffectConfig, flags.core.statusId, Roll#evaluate, canvas.grid.measureDistance, Roll async).
-- Fixed Active Effect controls (toggle/edit/delete) on the Effects tab by implementing custom handlers.
-- Fixed coordinate reading issues (`prior`, `change` object) in `updateToken` hook for Chilled damage.
-- Resolved `ReferenceError` and `Assignment to constant variable` errors in various functions/macros.
-- Fixed effect toggle initial state display (CSS) and visual disappearance (template loop using `actor.effects`).
-- Corrected DEX auto-fail logic for Restrained/Prone/Pinned.
-- Fixed chat message formatting for Debilitating poison macro.
-- Fixed poison stacking check logic for Sickness, Debilitating, Damage, Deadly types.
+- Resolved Foundry VTT deprecation warnings and API usage issues (V11/V12).
+- Fixed Active Effect controls on Effects tab via custom handlers.
+- Fixed coordinate reading issues in `updateToken` hook.
+- Resolved various `ReferenceError` and `Assignment to constant variable` errors.
+- Fixed effect toggle initial state display and visual disappearance bug (using `actor.effects` loop).
+- Corrected DEX auto-fail logic for relevant conditions in `_onAttributeRoll`.
+- Corrected various condition interaction logic (e.g., Confused removes Frightened, Wet removes Flammable, Insulated removes Frozen, Wet/Flame Resistant prevent Burning).
+- Fixed poison stacking check logic.
+- Fixed Stunned removal trigger (using `updateActor` hook).
+- Corrected chat message formatting issues for condition effects/macros.
 
 ### 🔧 Maintenance
 
-- Refactored Status Effect registration to `surge.js` `init` hook, replacing default effects.
-- Updated/created macros for applying conditions, using Foundry `Dialog` for input and including necessary checks (prerequisites, immunities, interactions, stacking).
-- Consolidated DEX attribute auto-fail logic into `_onAttributeRoll`.
-- Updated `handleCombatTurnStart` hook significantly for Confused, Burning, Crushed, Frozen, Damage Poison, and Deadly Poison effects.
-- Added `handleTokenUpdate` and `handlePreUpdateToken` hooks for Chilled movement damage.
-- Added workarounds/notes for GM adjudication where automation is complex or relies on potentially bugged core features (e.g., round duration expiry).
+- Refactored Status Effect registration to `surge.js` `init` hook.
+- Updated/created macros for applying conditions, using Foundry `Dialog` and including necessary checks.
+- Consolidated DEX attribute auto-fail logic.
+- Significantly updated `handleCombatTurnStart`, `handleTokenUpdate`, `handleActorUpdate`, `_performDamageRoll`, `_onSkillRoll`, `_onAttributeRoll` functions for condition mechanics.
+- Added workarounds/notes for GM adjudication and potential core Foundry bugs.
 - Added debug logging (recommend removing before final release).
 
 ## [0.5.1] - 2025-04-14

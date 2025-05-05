@@ -24,6 +24,21 @@
   "readme": "https://github.com/PupRiku/FoundryVTT-Surge/blob/main/README.md",
   "bugs": "https://github.com/PupRiku/FoundryVTT-Surge/issues",
   "changelog": "https://github.com/PupRiku/FoundryVTT-Surge/blob/main/CHANGELOG.md",
-  "packs": [],
+  "packs": [
+    {
+      "name": "surge-condition-macros",
+      "label": "SURGE! Condition Macros",
+      "path": "./packs/condition-macros.db",
+      "type": "Macro",
+      "system": "surge",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "TRUSTED": "OBSERVER",
+        "ASSISTANT": "OWNER",
+        "GAMEMASTER": "OWNER"
+      },
+      "pack": "surge.surge-condition-macros"
+    }
+  ],
   "languages": []
 }
