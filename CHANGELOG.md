@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.6.0] - 2025-04-18
+## [0.6.0] - 2025-05-04
 
 ### ✨ Features
 
@@ -24,6 +24,11 @@
 - Implemented basic "Frightened" condition (sets flag, stores source UUID via macro; action restriction GM adjudicated).
 - Implemented "Chilled" condition (applies 1 damage per foot moved via `updateToken` hook; macro resets duration on re-application).
 - Implemented "Invisible" condition (sets flag, provides +6 Guile bonus via `_onSkillRoll` check; perception contest and token visibility GM adjudicated).
+- Implemented "Mute" condition (sets flag; spellcasting prevention deferred, speech GM adjudicated).
+- Implemented "Paralyzed" condition (sets flags for paralyzed/helpless, move=0, duration set; action restriction/defense GM adjudicated).
+- Implemented "Restrained" condition (sets flag, move=0, auto-fails DEX attribute checks via `_onAttributeRoll`).
+- Implemented "Prone" condition (sets flags for prone/defenseless, auto-fails DEX attribute checks via `_onAttributeRoll`; defense/standing GM adjudicated).
+- Implemented "Pinned" condition (requires Restrained/Prone via macro check, sets flag, move=0, prevents physical attacks via JS checks, auto-fails DEX attribute checks via `_onAttributeRoll`).
 
 ### 🐛 Bug Fixes
 
@@ -34,11 +39,14 @@
 - Fixed effect toggle initial state display by adding CSS for `.effect-control.active`.
 - Fixed effect toggle causing visual disappearance by using `actor.effects` instead of potentially buggy `actor.appliedEffects` in sheet template loop.
 - Fixed `ReferenceError` in `_onSkillRoll` by ensuring consistent variable naming (`baseModifiers`).
+- Corrected DEX auto-fail logic for Restrained/Prone/Pinned to only affect direct attribute rolls in `_onAttributeRoll`.
 
 ### 🔧 Maintenance
 
 - Refactored Status Effect registration to be handled programmatically in `surge.js`'s `init` hook, replacing default effects.
 - Updated macros to use Foundry `Dialog` for input where needed ("Crushed") or add necessary checks (Flame Resistance, Confused removal of Frightened).
+- Consolidated DEX attribute auto-fail logic for Restrained, Prone, and Pinned into `_onAttributeRoll`.
+- Updated "Apply Confused" macro to automatically remove the "Frightened" condition.
 - Added workaround logic for apparent core Foundry VTT bug (as of v12.331) where 1-round duration effects do not auto-expire ("Helpless" / Chilled duration reset / manual removal needed).
 - Updated Active Effect flag reading logic for `crushSeverity` to read from the effect's flags (`effect.flags`).
 - Added debug logging to various functions (recommend removing before final release).
