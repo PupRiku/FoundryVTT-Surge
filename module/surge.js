@@ -81,10 +81,28 @@ const SURGE_STATUS_EFFECTS = [
     icon: 'systems/surge/assets/icons/conditions/pinned.svg',
   },
   {
-    _id: 'Dg7i2lzQCcCsX3LR',
-    id: 'poisoned',
-    label: 'Poisoned',
-    icon: 'systems/surge/assets/icons/conditions/poisoned.svg',
+    _id: 'OhzJEVuVkt2ZSld',
+    id: 'poisoned-sickness',
+    label: 'Poisoned (Sickness)',
+    icon: 'systems/surge/assets/icons/conditions/poisoned-sickness.svg',
+  },
+  {
+    _id: 'x5nQtQ64TcnPCxvX',
+    id: 'poisoned-debilitating',
+    label: 'Poisoned (Debilitating)',
+    icon: 'systems/surge/assets/icons/conditions/poisoned-debilitating.svg',
+  },
+  {
+    _id: '95pS5sguTAGZ65F6',
+    id: 'poisoned-damage',
+    label: 'Poisoned (Damage)',
+    icon: 'systems/surge/assets/icons/conditions/poisoned-damage.svg',
+  },
+  {
+    _id: 'tN2P6lfSZRu0GUJA',
+    id: 'poisoned-deadly',
+    label: 'Poisoned (Deadly)',
+    icon: 'systems/surge/assets/icons/conditions/poisoned-deadly.svg',
   },
   {
     _id: '0TUl3HTQw2sBdz5h',
@@ -127,6 +145,12 @@ const SURGE_STATUS_EFFECTS = [
     id: 'chilled',
     label: 'Chilled',
     icon: 'systems/surge/assets/icons/conditions/chilled.svg',
+  },
+  {
+    _id: 'vgQL0Z2BVVL1g7UF',
+    id: 'incapacitated',
+    label: 'Incapacitated',
+    icon: 'systems/surge/assets/icons/conditions/incapacitated.svg',
   },
 ];
 
@@ -550,6 +574,36 @@ const pinnedEffectData = {
   flags: { surge: {} },
 };
 
+// --- Active Effect Data for Incapacitated ---
+const incapacitatedEffectData = {
+  name: 'Incapacitated', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/incapacitated.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until removed
+  disabled: false,
+  changes: [
+    // Override movement value
+    {
+      key: 'system.passives.movement.value', // CONFIRMED PATH
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: '0',
+      priority: 50,
+    },
+    // Flag to indicate the incapacitated state
+    {
+      key: 'flags.surge.incapacitated',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 60, // High priority to potentially override other actions?
+    },
+    // Note: Auto-fail checks handled by JS hook below
+  ],
+  description: `<p>Falls Prone (Prone condition also applied).</p>
+                <p><strong>Movement:</strong> 0</p>
+                <p><strong>Actions:</strong> Unable to take any Actions (GM Adjudicated).</p>
+                <p><strong>Checks:</strong> Automatically fails Attribute and Skill checks.</p>`,
+  flags: { surge: {} },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -617,6 +671,22 @@ export class SurgeCharacterSheet extends ActorSheet {
    * @private
    */
   async _performRoll(level, label, modifiers = [], attributeKey = null) {
+    const isIncapacitated = this.actor.flags?.surge?.incapacitated === true;
+    if (isIncapacitated) {
+      const messageContent = `${this.actor.name} is Incapacitated and automatically fails the ${label}.`;
+      ChatMessage.create({
+        user: game.user.id,
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: messageContent,
+      });
+      ui.notifications.warn(
+        `${this.actor.name} automatically failed ${label} due to being Incapacitated.`
+      );
+      console.log(
+        `SURGE | ${this.actor.name} auto-failed check due to Incapacitated.`
+      );
+      return; // Stop the roll process immediately
+    }
     level = Math.max(1, Math.min(20, level || 1)); // Ensure level is 1-20
     const rollData = this._rollTable[level];
     if (!rollData) {
