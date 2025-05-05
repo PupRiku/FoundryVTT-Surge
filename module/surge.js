@@ -409,6 +409,26 @@ const invisibleEffectData = {
   flags: { surge: {} },
 };
 
+// --- Active Effect Data for Mute ---
+const muteEffectData = {
+  name: 'Mute', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/mute.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Default: Indefinite (Random 1d12h duration requires JS on apply)
+  disabled: false,
+  changes: [
+    // Flag to indicate the condition is active
+    {
+      key: 'flags.surge.mute',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description:
+    '<p>Unable to communicate by speaking (GM Adjudicated).</p><p>Unable to cast spells.</p><p>Duration: 1d12 hours (unless permanent or cured).</p>',
+  flags: { surge: {} },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
