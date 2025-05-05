@@ -152,6 +152,18 @@ const SURGE_STATUS_EFFECTS = [
     label: 'Incapacitated',
     icon: 'systems/surge/assets/icons/conditions/incapacitated.svg',
   },
+  {
+    _id: 'UTPO45Ta8hZkpCKk',
+    id: 'bleeding',
+    label: 'Bleeding',
+    icon: 'icons/svg/blood.svg',
+  },
+  {
+    _id: 'suxR99rD2h01eozN', // Generate unique ID
+    id: 'broken', // System-unique ID
+    label: 'Broken',
+    icon: 'systems/surge/assets/icons/conditions/broken.svg', // MAKE SURE YOU HAVE AN ICON
+  },
 ];
 
 // --- Active Effect Data for Blinded ---
@@ -768,6 +780,50 @@ const wetEffectData = {
   flags: { surge: {} },
 };
 
+const bleedingEffectData = {
+  name: 'Bleeding', // V12+ name
+  img: 'icons/svg/blood.svg', // Core icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until patched/cured
+  disabled: false,
+  changes: [
+    // Flag to indicate the bleeding state
+    {
+      key: 'flags.surge.bleeding',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: `<p>Takes additional damage from hits equal to the current Bleeding intensity (starts at +1, doubles each turn - see Flags). Assumes bonus applies to *all* hits while active.</p>
+                <p>Remedy: Patch Up action, cures.</p>`,
+  // Initialize the bonus damage counter flag
+  flags: {
+    surge: {
+      bleedingDamage: 1, // Starts at +1 bonus damage for the first turn
+    },
+  },
+};
+
+// --- Active Effect Data for Broken ---
+const brokenEffectData = {
+  name: 'Broken', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/broken.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until patched
+  disabled: false,
+  changes: [
+    // Flag to indicate the broken state
+    {
+      key: 'flags.surge.broken',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: `<p>Takes double damage from Physical sources.</p>
+                <p>Remedy: Requires Brace item and Patch Up action (details TBD).</p>`,
+  flags: { surge: {} },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -781,7 +837,7 @@ export class SurgeCharacterSheet extends ActorSheet {
    * @override
    */
   static get defaultOptions() {
-    console.log('SURGE! | Getting REVISED default options (with tabs)...'); // Log message updated
+    // console.log('SURGE! | Getting REVISED default options (with tabs)...'); // Log message updated
     return foundry.utils.mergeObject(super.defaultOptions, {
       classes: ['surge', 'sheet', 'actor', 'character'],
       template: 'systems/surge/templates/sheets/actor-sheet.hbs',
@@ -1033,7 +1089,7 @@ export class SurgeCharacterSheet extends ActorSheet {
     context.systemData.passives.menace.tooltip = `Base: ${baseMenace} + Equip: ${equipmentMenace} = Total: ${totalMenace}`;
     // --- End of Menace Calculation ---
 
-    console.log('SURGE! | Character Sheet Data Context:', context);
+    // console.log('SURGE! | Character Sheet Data Context:', context);
 
     return context;
   }
@@ -1047,7 +1103,7 @@ export class SurgeCharacterSheet extends ActorSheet {
   activateListeners(html) {
     // Call the parent class's activateListeners method
     super.activateListeners(html);
-    console.log('SURGE! | Activating Listeners');
+    // console.log('SURGE! | Activating Listeners');
 
     // --- Roll Listeners ---
     html
@@ -1087,7 +1143,7 @@ export class SurgeCharacterSheet extends ActorSheet {
       .find('.effect-control[data-action="delete"]')
       .click(this._onEffectDelete.bind(this));
 
-    console.log('SURGE! | Attached CUSTOM effect control listeners.');
+    // console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
 
   /**
@@ -1520,43 +1576,172 @@ export class SurgeCharacterSheet extends ActorSheet {
   }
 
   /**
-   * Performs a SURGE! system damage roll, adding the 'x6' surge rule.
-   * @param {string} formula      The base damage formula (e.g., "1d6", "2d6+2").
-   * @param {string} label        The label for the chat message.
-   * @param {string} [damageType=""] Optional damage type for context.
-   * @returns {Promise<void>}     Sends the result to chat.
+   * Performs a SURGE! system damage roll, adding 'x6', applying to targets,
+   * and including bonus damage for Bleeding or doubling for Broken (Physical).
+   * @param {string} formula        The base damage formula (e.g., "1d6", "2d6+2").
+   * @param {string} label          The label for the chat message flavor.
+   * @param {string} [damageType="Physical"] Optional damage type (defaults to Physical). // Default added
+   * @returns {Promise<void>}       Sends roll result & damage summary to chat, updates targets.
    * @private
    */
-  async _performDamageRoll(formula, label, damageType = '') {
-    // Ensure 'x6' is added to d6s for SURGE, but not if already present (e.g., d6x)
-    // This regex looks for 'd6' NOT immediately followed by 'x' or another digit.
-    const surgeFormula = formula.replace(/d6(?![x0-9])/gi, 'd6x6');
-
+  async _performDamageRoll(formula, label, damageType = 'Physical') {
+    // Default damage type to Physical
+    console.log(`SURGE | --- _performDamageRoll START ---`);
     console.log(
-      `SURGE | Rolling Damage - Base: ${formula}, Surge: ${surgeFormula}, Label: ${label}`
+      `SURGE | Input Formula: ${formula}, Label: ${label}, Type: ${damageType}`
     );
 
-    // Prepare roll data (mostly for context, damage usually doesn't use @attributes)
+    const surgeFormula = formula.replace(/d6(?![x0-9])/gi, 'd6x6');
+    console.log(`SURGE | Surge Formula: ${surgeFormula}`);
+
     const rollData = this.actor.getRollData() ?? {};
-
     const roll = new Roll(surgeFormula, rollData);
+    const attackerActor = this.actor;
+
     try {
-      await roll.evaluate(); // Use default async evaluate
+      console.log(`SURGE | Evaluating roll...`);
+      await roll.evaluate();
+      const baseRollTotal = roll.total; // Store base roll total
+      console.log(`SURGE | Roll Evaluated. Base Total: ${baseRollTotal}`);
 
-      // TODO: Apply damage to targets later using hooks or chat message parsing
+      // Send the base dice roll to chat first
+      console.log(`SURGE | Sending base roll to chat...`);
+      try {
+        await roll.toMessage({
+          speaker: ChatMessage.getSpeaker({ actor: attackerActor }),
+          flavor: label,
+        });
+        console.log(`SURGE | Base roll message sent.`);
+      } catch (rollMsgErr) {
+        console.error(`SURGE | Failed to send base roll message:`, rollMsgErr);
+      }
 
-      await roll.toMessage({
-        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
-        flavor: label,
-        // Could add flags for automation: flags: { surge: { damage: roll.total, type: damageType, itemId: item.id } }
-      });
+      // Get Targets
+      const targets = game.user.targets;
+      console.log(`SURGE | Targets found: ${targets.size}`, targets);
+      if (targets.size === 0) {
+        ui.notifications.warn(
+          'Damage rolled, but no target selected to apply damage.'
+        );
+        return;
+      }
+
+      let chatDamageDetails = [];
+
+      console.log(`SURGE | Starting target loop...`);
+      for (const targetToken of targets) {
+        const targetActor = targetToken.actor;
+        if (!targetActor) {
+          /* ... skip ... */ continue;
+        }
+        console.log(`SURGE | Processing target Actor: ${targetActor.name}`);
+
+        let bonusDamage = 0;
+        let damageMultiplier = 1; // Start with multiplier 1
+        let damageNotes = []; // Collect notes like Bleed, Broken
+
+        // Check for Bleeding
+        const bleedingEffect = targetActor.effects.find(
+          (e) =>
+            e.changes.some((c) => c.key === 'flags.surge.bleeding') &&
+            !e.disabled
+        );
+        if (bleedingEffect) {
+          bonusDamage = Number(
+            bleedingEffect.flags?.surge?.bleedingDamage ?? 1
+          );
+          if (bonusDamage <= 0) bonusDamage = 1;
+          console.log(
+            `SURGE | Target <span class="math-inline">\{targetActor\.name\} IS Bleeding\. Bonus Damage\: \+</span>{bonusDamage}`
+          );
+          damageNotes.push(`${bonusDamage} Bleed`);
+        }
+
+        // Check for Broken and Physical Damage Type
+        const isBroken = targetActor.flags?.surge?.broken === true;
+        // Use case-insensitive check, rely on default 'Physical' if type is empty/null
+        const isPhysical =
+          (damageType || 'Physical').toLowerCase() === 'physical';
+        console.log(
+          `SURGE | Target ${targetActor.name} Is Broken: ${isBroken}, Is Physical Dmg: ${isPhysical}`
+        );
+
+        if (isBroken && isPhysical) {
+          console.log(
+            `SURGE | Target ${targetActor.name} is Broken! Doubling Physical damage.`
+          );
+          damageMultiplier = 2; // Set multiplier to 2
+          damageNotes.push(`x2 Broken`);
+        }
+
+        // Calculate final damage: (Base Roll + Bleed Bonus) * Multiplier (for Broken)
+        const finalDamage = Math.max(
+          0,
+          (baseRollTotal + bonusDamage) * damageMultiplier
+        );
+        console.log(
+          `SURGE | Calculated final damage for ${targetActor.name}: ${finalDamage} (Roll: ${baseRollTotal}, Bonus: ${bonusDamage}, Multiplier: ${damageMultiplier})`
+        );
+
+        // Apply damage update
+        const currentHp = targetActor.system.passives.hp.value;
+        console.log(
+          `SURGE | Target ${targetActor.name} current HP: ${currentHp}`
+        );
+        if (typeof currentHp === 'number') {
+          const newHp = Math.max(0, currentHp - finalDamage);
+          console.log(`SURGE | Updating ${targetActor.name} HP to: ${newHp}`);
+          try {
+            await targetActor.update({ 'system.passives.hp.value': newHp });
+            console.log(
+              `SURGE | Actor HP update successful for ${targetActor.name}.`
+            );
+            // Build chat detail string
+            let detail = `${targetToken.name} takes ${finalDamage}`;
+            if (damageNotes.length > 0) {
+              detail += ` (${baseRollTotal} Base + ${damageNotes.join(', ')})`;
+            }
+            detail += ` damage.`;
+            chatDamageDetails.push(detail);
+          } catch (updateErr) {
+            /* ... error log ... */
+          }
+        } else {
+          /* ... error log ... */
+        }
+      } // --- END TARGET LOOP ---
+      console.log(`SURGE | Finished target loop.`);
+
+      // --- Send summary damage application message ---
+      console.log(
+        `SURGE | Preparing summary chat message. Details array:`,
+        chatDamageDetails
+      );
+      if (chatDamageDetails.length > 0) {
+        try {
+          await ChatMessage.create({
+            speaker: ChatMessage.getSpeaker({ actor: attackerActor }),
+            content: `<strong>Damage Applied:</strong><br>${chatDamageDetails.join(
+              '<br>'
+            )}`,
+          });
+          console.log(`SURGE | Summary damage message sent.`);
+        } catch (summaryMsgErr) {
+          /* ... */
+        }
+      } else {
+        /* ... */
+      }
     } catch (err) {
       console.error(
-        `SURGE | Damage roll evaluation failed for formula "${surgeFormula}":`,
+        `SURGE | Damage roll/application failed for formula "${surgeFormula}":`,
         err
       );
-      ui.notifications.error(`Failed to evaluate damage roll for ${label}.`);
+      ui.notifications.error(
+        `Failed to evaluate/apply damage roll for ${label}.`
+      );
     }
+    console.log(`SURGE | --- _performDamageRoll END ---`);
   }
 
   /**
@@ -1663,10 +1848,10 @@ export class SurgeCharacterSheet extends ActorSheet {
     }
 
     console.log(
-      `SURGE DEBUG | _getEquippedPenalties Input: attr='<span class="math-inline">\{attributeKey\}', skill\='</span>{skillKey}'`
+      `SURGE DEBUG | _getEquippedPenalties Input: attr=${attributeKey}', skill='${skillKey}'`
     );
     console.log(
-      `SURGE DEBUG | _getEquippedPenalties Calculated: attrPenalty=<span class="math-inline">\{totalAttrPenalty\}, skillPenalty\=</span>{totalSkillPenalty}`
+      `SURGE DEBUG | _getEquippedPenalties Calculated: attrPenalty=${totalAttrPenalty}, skillPenalty=${totalSkillPenalty}`
     );
     console.log(
       `SURGE DEBUG | _getEquippedPenalties Returning:`,
@@ -2198,7 +2383,6 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
 
   // --- Handle Crushed Condition Damage ---
   const isCrushed = actor.flags?.surge?.crushed === true; // This check (using actor flags) is still okay because 'flags.surge.crushed' is set via 'changes'
-
   if (isCrushed) {
     // Find the specific "Crushed" Active Effect on the actor
     // We can find it by the flag it sets OR by its name/icon if more reliable
@@ -2272,7 +2456,6 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
   // --- Handle Burning Condition Damage & Escalation ---
   // Check using the flag set by the 'changes' array
   const isBurning = actor.flags?.surge?.burning === true;
-
   if (isBurning) {
     // Find the Burning Active Effect to read/update its flags
     const burningEffect = actor.effects.find(
@@ -2373,8 +2556,6 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
   // --- Handle Frozen Condition Damage ---
   // Check using the flag set by 'changes' array
   const isFrozen = actor.flags?.surge?.frozen === true;
-  console.log(`SURGE | Checking Frozen status for ${actor.name}: ${isFrozen}`);
-
   if (isFrozen) {
     // Find the specific *enabled* Frozen effect
     const frozenEffect = actor.effects.find(
@@ -2432,13 +2613,6 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
           ) && !e.disabled
       )
     : null;
-
-  console.log(
-    `SURGE | Checking Poisoned (Damage) status for ${
-      actor.name
-    }: ${!!damagePoisonEffect}`
-  );
-
   if (damagePoisonEffect) {
     console.log(
       `SURGE | Applying 1d6 Poison (Damage) damage to ${actor.name}.`
@@ -2482,13 +2656,6 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
           ) && !e.disabled
       )
     : null;
-
-  console.log(
-    `SURGE | Checking Poisoned (Deadly) status for ${
-      actor.name
-    }: ${!!deadlyPoisonEffect}`
-  );
-
   if (deadlyPoisonEffect) {
     let turnCount = Number(
       deadlyPoisonEffect.flags?.surge?.poisonDeadlyTurns ?? 0
@@ -2611,6 +2778,70 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
       );
     }
   } // --- End Poisoned (Deadly) Handling ---
+
+  // --- Handle Bleeding Damage Escalation ---
+  // Find the enabled Bleeding effect by checking the flag set in its 'changes'
+  const bleedingEffect = actor.effects.find(
+    (e) =>
+      e.changes.some((c) => c.key === 'flags.surge.bleeding') && !e.disabled
+  );
+
+  console.log(
+    `SURGE | Checking Bleeding status for ${actor.name}: ${!!bleedingEffect}`
+  );
+
+  if (bleedingEffect) {
+    // Get the damage bonus that applied *during the turn that just ended*
+    let currentBonus = Number(bleedingEffect.flags?.surge?.bleedingDamage ?? 1);
+    if (currentBonus <= 0) currentBonus = 1; // Should start at 1
+
+    // Calculate the bonus for the *next* turn
+    const nextBonus = currentBonus * 2;
+    await bleedingEffect.update({ 'flags.surge.bleedingDamage': nextBonus });
+    console.log(
+      `SURGE | Updated bleedingDamage flag to ${nextBonus} on effect ${bleedingEffect.id}`
+    );
+
+    console.log(
+      `SURGE | Bleeding bonus for ${actor.name} is escalating from +${currentBonus} to +${nextBonus}.`
+    );
+
+    try {
+      // Update the flag on the effect for the next turn
+      await bleedingEffect.update({ 'flags.surge.bleedingDamage': nextBonus });
+      console.log(
+        `SURGE | Updated bleedingDamage flag to ${nextBonus} on effect ${bleedingEffect.id}`
+      );
+
+      // Post chat message announcing the NEW bonus for upcoming hits
+      const chatMessageContent = `The bleeding on ${actor.name} worsens! Subsequent hits now deal +${nextBonus} damage.`;
+      console.log(
+        `SURGE | Attempting to create chat message with content: "${chatMessageContent}"`
+      );
+      try {
+        await ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ alias: 'Bleeding' }),
+          content: chatMessageContent,
+        });
+        console.log(
+          `SURGE | Bleeding escalation chat message creation attempted.`
+        );
+      } catch (chatErr) {
+        console.error(
+          `SURGE | Failed to create Bleeding escalation chat message:`,
+          chatErr
+        );
+      }
+    } catch (err) {
+      console.error(
+        `SURGE | Failed during Bleeding escalation update for ${actor.name}:`,
+        err
+      );
+      ui.notifications.error(
+        `Error processing bleeding effect escalation for ${actor.name}.`
+      );
+    }
+  } // --- End Bleeding Handling ---
 }
 
 /**
@@ -2784,19 +3015,19 @@ async function handleTokenUpdate(tokenDocument, change, options, userId) {
 Hooks.once('ready', () => {
   // Register the combat turn handler hook once the game is ready
   Hooks.on('updateCombat', handleCombatTurnStart);
-  console.log(
-    'SURGE! | Registered combat turn handler for Confused condition.'
-  );
+  // console.log(
+  //   'SURGE! | Registered combat turn handler for Confused condition.'
+  // );
 
   Hooks.on('preUpdateToken', handlePreUpdateToken); // Add listener for preUpdate
-  console.log('SURGE! | Registered token pre-update handler for Chilled.');
+  // console.log('SURGE! | Registered token pre-update handler for Chilled.');
 
   // Register token update handler (for Chilled damage on move)
   Hooks.on('updateToken', handleTokenUpdate);
-  console.log('SURGE! | Registered token update handler for Chilled.');
+  // console.log('SURGE! | Registered token update handler for Chilled.');
 
   Hooks.on('updateActor', handleActorUpdate);
-  console.log('SURGE! | Registered actor update handler for Stunned removal.');
+  // console.log('SURGE! | Registered actor update handler for Stunned removal.');
 });
 
 // --- System Initialization ---
