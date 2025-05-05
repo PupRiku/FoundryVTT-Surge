@@ -604,6 +604,95 @@ const incapacitatedEffectData = {
   flags: { surge: {} },
 };
 
+// --- Active Effect Data for Poisoned (Sickness) ---
+const poisonedSicknessEffectData = {
+  name: 'Poisoned (Sickness)', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/poisoned-sickness.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Duration determined on application
+  disabled: false,
+  changes: [
+    // Flag to identify this type of poison
+    {
+      key: 'flags.surge.poisonType',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'sickness',
+      priority: 5,
+    },
+    // Could add a specific flag like flags.surge.isPoisonedSickness if preferred
+  ],
+  description: `<p>Applies Confused, Incapacitated, or Paralyzed randomly (see effect flags for result).</p><p>Duration: 1d6 hours (see effect duration).</p><p>Remedy: Antidote, cures, or time.</p>`,
+  // Flags for applied secondary effect and duration will be added dynamically by the macro
+  flags: { surge: {} },
+};
+
+// --- Active Effect Data for Poisoned (Debilitating) ---
+const poisonedDebilitatingEffectData = {
+  name: 'Poisoned (Debilitating)', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/poisoned-debilitating.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Duration determined on application
+  disabled: false,
+  changes: [
+    // Flag to identify this type of poison
+    {
+      key: 'flags.surge.poisonType',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'debilitating',
+      priority: 5,
+    },
+  ],
+  description: `<p>Applies Blinded or Deafened randomly (see effect flags for result).</p><p>Duration: 1d6 hours (see effect duration).</p><p>Remedy: Antidote, cures, or time.</p>`,
+  // Flags for applied secondary effect and duration will be added dynamically by the macro
+  flags: { surge: {} },
+};
+
+// --- Active Effect Data for Poisoned (Damage) ---
+const poisonedDamageEffectData = {
+  name: 'Poisoned (Damage)', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/poisoned-damage.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until cured
+  disabled: false,
+  changes: [
+    // Flag to identify this type of poison
+    {
+      key: 'flags.surge.poisonType',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'damage',
+      priority: 5,
+    },
+  ],
+  description: `<p>Takes 1d6 damage at start of turn in combat.</p>
+                <p>Takes 2d6 damage per hour out of combat (GM Tracks).</p>
+                <p>Remedy: Antidote of Writhing, cures.</p>`,
+  flags: { surge: {} },
+};
+
+// --- Active Effect Data for Poisoned (Deadly) ---
+const poisonedDeadlyEffectData = {
+  name: 'Poisoned (Deadly)', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/poisoned-deadly.svg', // Match icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Timer handled by flags/hook
+  disabled: false,
+  changes: [
+    // Flag to identify this type of poison
+    {
+      key: 'flags.surge.poisonType',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'deadly',
+      priority: 5,
+    },
+    // We could add a specific isDeadlyPoisoned flag too if needed
+  ],
+  description: `<p>Creature enters Death Rolls at the start of the 6th turn after application if not cured.</p><p>Remedy: Antidote of Deadly Poison, cures.</p>`,
+  // Initialize turn counter flag - hook will increment this
+  flags: {
+    surge: {
+      poisonDeadlyTurns: 0, // Start counter at 0 (turn 1 will be the first increment)
+      // startRound: null, // Macro will set these if in combat
+      // startTurn: null
+    },
+  },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -2158,6 +2247,198 @@ async function handleCombatTurnStart(combat, changed, options, userId) {
       );
     }
   } // --- End Frozen Handling ---
+
+  // --- Handle Poisoned (Damage) Condition Damage ---
+  // Check if the actor has this specific poison type flag
+  const hasDamagePoison = actor.flags?.surge?.poisonType === 'damage';
+  // Find the effect to ensure it's not disabled
+  const damagePoisonEffect = hasDamagePoison
+    ? actor.effects.find(
+        (e) =>
+          e.changes.some(
+            (c) => c.key === 'flags.surge.poisonType' && c.value === 'damage'
+          ) && !e.disabled
+      )
+    : null;
+
+  console.log(
+    `SURGE | Checking Poisoned (Damage) status for ${
+      actor.name
+    }: ${!!damagePoisonEffect}`
+  );
+
+  if (damagePoisonEffect) {
+    console.log(
+      `SURGE | Applying 1d6 Poison (Damage) damage to ${actor.name}.`
+    );
+    try {
+      const damageRoll = await new Roll('1d6').evaluate();
+      damageRoll.toMessage({
+        speaker: ChatMessage.getSpeaker({ alias: 'Poison (Damage)' }),
+        flavor: `Damage taken by ${actor.name}`,
+      });
+
+      const damageTaken = damageRoll.total;
+      console.log(`SURGE | Applying ${damageTaken} poison damage.`);
+
+      // Apply damage
+      const currentHp = actor.system.passives.hp.value;
+      if (typeof currentHp === 'number') {
+        const newHp = Math.max(0, currentHp - damageTaken);
+        await actor.update({ 'system.passives.hp.value': newHp });
+        console.log(`SURGE | ${actor.name} HP updated to ${newHp}.`);
+      } else {
+        /* Error log */
+      }
+    } catch (err) {
+      console.error(
+        `SURGE | Failed during Poison (Damage) for ${actor.name}:`,
+        err
+      );
+      ui.notifications.error(`Error applying poison damage for ${actor.name}.`);
+    }
+  } // --- End Poisoned (Damage) Handling ---
+
+  // --- Handle Poisoned (Deadly) Timer ---
+  // Check if actor has the flag from an *enabled* effect
+  const hasDeadlyPoisonFlag = actor.flags?.surge?.poisonType === 'deadly';
+  const deadlyPoisonEffect = hasDeadlyPoisonFlag
+    ? actor.effects.find(
+        (e) =>
+          e.changes.some(
+            (c) => c.key === 'flags.surge.poisonType' && c.value === 'deadly'
+          ) && !e.disabled
+      )
+    : null;
+
+  console.log(
+    `SURGE | Checking Poisoned (Deadly) status for ${
+      actor.name
+    }: ${!!deadlyPoisonEffect}`
+  );
+
+  if (deadlyPoisonEffect) {
+    let turnCount = Number(
+      deadlyPoisonEffect.flags?.surge?.poisonDeadlyTurns ?? 0
+    );
+    turnCount++; // Increment for the current turn
+    console.log(
+      `SURGE | Deadly Poison turn count for ${actor.name} is now: ${turnCount}`
+    );
+
+    try {
+      if (turnCount >= 6) {
+        // --- UPDATED Consequence: HP 0 + Incapacitated ---
+        console.log(
+          `SURGE | Deadly Poison timer reached 6 turns for ${actor.name}. Applying consequence.`
+        );
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ alias: 'Deadly Poison' }),
+          content: `${actor.name} succumbs to the Deadly Poison and falls Incapacitated!`,
+        });
+
+        // 1. Set HP to 0
+        await actor.update({ 'system.passives.hp.value': 0 });
+        console.log(`SURGE | Set ${actor.name} HP to 0.`);
+
+        // 2. Apply Incapacitated (which should also apply Prone via its macro logic - replicate here)
+        // Need Incapacitated and Prone effect data accessible or defined here
+        const incapacitatedData = {
+          /* ... Copy incapacitatedEffectData definition ... */ name: 'Incapacitated',
+          img: 'systems/surge/assets/icons/conditions/incapacitated.svg',
+          duration: { seconds: null },
+          disabled: false,
+          changes: [
+            {
+              key: 'system.passives.movement.value',
+              mode: 5,
+              value: '0',
+              priority: 50,
+            },
+            {
+              key: 'flags.surge.incapacitated',
+              mode: 5,
+              value: 'true',
+              priority: 60,
+            },
+          ],
+          description: '...',
+          flags: { surge: {} },
+        };
+        const proneData = {
+          /* ... Copy proneEffectData definition ... */ name: 'Prone',
+          img: 'systems/surge/assets/icons/conditions/prone.svg',
+          duration: { seconds: null },
+          disabled: false,
+          changes: [
+            { key: 'flags.surge.prone', mode: 5, value: 'true', priority: 10 },
+            {
+              key: 'flags.surge.proneUnableToDefend',
+              mode: 5,
+              value: 'true',
+              priority: 10,
+            },
+          ],
+          description: '...',
+          flags: { surge: {} },
+        };
+
+        // Apply Incapacitated
+        await ActiveEffect.create(incapacitatedData, { parent: actor });
+        console.log(`SURGE | Applied Incapacitated effect.`);
+
+        // Apply Prone (if not already prone)
+        const isAlreadyProne = actor.effects.some(
+          (e) =>
+            e.changes.some((c) => c.key === 'flags.surge.prone') && !e.disabled
+        );
+        if (!isAlreadyProne) {
+          await ActiveEffect.create(proneData, { parent: actor });
+          console.log(`SURGE | Applied Prone effect.`);
+        }
+
+        // 3. Remove the Deadly Poison effect itself
+        await deadlyPoisonEffect.delete();
+        console.log(`SURGE | Removed Deadly Poison effect.`);
+        // --- End Updated Consequence ---
+      } else {
+        // --- Update Counter and Warn ---
+        console.log(
+          `SURGE | Updating deadly poison turn count to ${turnCount}.`
+        );
+        // Update the flag on the effect
+        await deadlyPoisonEffect.update({
+          'flags.surge.poisonDeadlyTurns': turnCount,
+        });
+        console.log(`SURGE | Effect flag updated.`);
+
+        // Send warning message to chat (NO WHISPER)
+        const turnsLeft = 5 - turnCount; // Turns remaining *after* this one
+        let warningMsg = `${actor.name} - Deadly Poison: Turn ${turnCount}/5.`;
+        if (turnsLeft <= 0) {
+          warningMsg += ` Falls Incapacitated next turn if not cured!`;
+        } else {
+          warningMsg += ` ${turnsLeft} turn${
+            turnsLeft > 1 ? 's' : ''
+          } remaining!`;
+        }
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ alias: 'Deadly Poison' }),
+          content: warningMsg,
+          // whisper: ChatMessage.getWhisperRecipients("GM") // <<< REMOVED WHISPER
+        });
+        console.log(`SURGE | Posted warning message to chat.`);
+      }
+    } catch (err) {
+      console.error(
+        `SURGE | Failed during Deadly Poison processing for ${actor.name}:`,
+        err
+      );
+      ui.notifications.error(
+        `Error processing Deadly Poison for ${actor.name}.`
+      );
+    }
+  } // --- End Poisoned (Deadly) Handling ---
 }
 
 /**
