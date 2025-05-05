@@ -722,6 +722,52 @@ const stunnedEffectData = {
   },
 };
 
+// --- Active Effect Data for Unconscious ---
+const unconsciousEffectData = {
+  name: 'Unconscious', // V12+ name
+  img: 'icons/svg/unconscious.svg', // Core icon path
+  duration: { seconds: null, rounds: null, turns: null }, // Indefinite until remedied
+  disabled: false,
+  changes: [
+    // Flag to indicate the unconscious state
+    // Note: Prone applied separately; Move=0 implied by Prone/Inaction
+    {
+      key: 'flags.surge.unconscious',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 70, // High priority
+    },
+  ],
+  description: `<p>Falls Prone (Prone condition also applied).</p>
+                <p>Unaware of surroundings.</p>
+                <p><strong>Actions:</strong> Incapable of taking Actions or Speaking (GM Adjudicated).</p>
+                <p><strong>Checks:</strong> Automatically fails Attribute and Skill checks.</p>
+                <p><strong>Remedies:</strong> Medicine check action (by others); Standard cures (only if HP>0); Specific Healing (if HP <= 0).</p>`,
+  flags: { surge: {} },
+};
+
+// --- Active Effect Data for Wet ---
+const wetEffectData = {
+  name: 'Wet', // V12+ name
+  img: 'systems/surge/assets/icons/conditions/wet.svg', // Match icon path
+  duration: { seconds: 3600, rounds: null, turns: null }, // 1 Hour default duration
+  disabled: false,
+  changes: [
+    // Flag to indicate the wet state
+    {
+      key: 'flags.surge.wet',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 10,
+    },
+  ],
+  description: `<p>Immune to Burning status effect.</p>
+                <p>Gaining Chilled while Wet also applies Frozen.</p>
+                <p>Removes Flammable condition upon application.</p>
+                <p><strong>Remedies:</strong> Dries after 1 hour; Heat source for 10 min (GM Adjudicated).</p>`,
+  flags: { surge: {} },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -790,18 +836,24 @@ export class SurgeCharacterSheet extends ActorSheet {
    */
   async _performRoll(level, label, modifiers = [], attributeKey = null) {
     const isIncapacitated = this.actor.flags?.surge?.incapacitated === true;
-    if (isIncapacitated) {
-      const messageContent = `${this.actor.name} is Incapacitated and automatically fails the ${label}.`;
+    const isUnconscious = this.actor.flags?.surge?.unconscious === true;
+    let checkFailReason = null;
+
+    if (isIncapacitated) checkFailReason = 'Incapacitated';
+    else if (isUnconscious) checkFailReason = 'Unconscious';
+
+    if (checkFailReason) {
+      const messageContent = `${this.actor.name} is ${checkFailReason} and automatically fails the ${label}.`;
       ChatMessage.create({
         user: game.user.id,
         speaker: ChatMessage.getSpeaker({ actor: this.actor }),
         content: messageContent,
       });
       ui.notifications.warn(
-        `${this.actor.name} automatically failed ${label} due to being Incapacitated.`
+        `${this.actor.name} automatically failed ${label} due to being ${checkFailReason}.`
       );
       console.log(
-        `SURGE | ${this.actor.name} auto-failed check due to Incapacitated.`
+        `SURGE | ${this.actor.name} auto-failed check due to ${checkFailReason}.`
       );
       return; // Stop the roll process immediately
     }
@@ -2785,6 +2837,9 @@ Hooks.once('init', () => {
     // Add overrides specifically for 'insulated'
     if (effect.id === 'insulated') {
       effectData.overrides = ['chilled']; // Prevent 'chilled' status/effect
+    }
+    if (effect.id === 'wet') {
+      effectData.overrides = ['surge-burning']; // Prevent 'surge-burning' status/effect
     }
     return effectData;
   });
