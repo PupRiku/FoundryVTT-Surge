@@ -1,5 +1,85 @@
 import { SurgeItemSheet } from './item-sheet.js';
 
+Hooks.once('init', () => {
+  console.log('SURGE! | System Initializing...');
+
+  console.log('SURGE! | Initializing CONFIG.SURGE...');
+  CONFIG.SURGE = {
+    effectData: {},
+  };
+  console.log('SURGE! | CONFIG.SURGE initialized.');
+
+  console.log('SURGE! | Registering effect data constants...');
+  // Ensure the variables like bleedingEffectData are defined/accessible here
+  CONFIG.SURGE.effectData['bleeding'] = bleedingEffectData;
+  CONFIG.SURGE.effectData['broken'] = brokenEffectData;
+  CONFIG.SURGE.effectData['chilled'] = chilledEffectData;
+  CONFIG.SURGE.effectData['confused'] = confusedEffectData;
+  CONFIG.SURGE.effectData['crushed'] = crushedEffectData;
+  CONFIG.SURGE.effectData['deafened'] = deafenedEffectData;
+  CONFIG.SURGE.effectData['flame-resistant'] = flameResistantEffectData;
+  CONFIG.SURGE.effectData['flammable'] = flammableEffectData;
+  CONFIG.SURGE.effectData['frightened'] = frightenedEffectData;
+  CONFIG.SURGE.effectData['frozen'] = frozenEffectData;
+  CONFIG.SURGE.effectData['incapacitated'] = incapacitatedEffectData;
+  CONFIG.SURGE.effectData['insulated'] = insulatedEffectData;
+  CONFIG.SURGE.effectData['invisible'] = invisibleEffectData;
+  CONFIG.SURGE.effectData['mute'] = muteEffectData;
+  CONFIG.SURGE.effectData['paralyzed'] = paralyzedEffectData;
+  CONFIG.SURGE.effectData['pinned'] = pinnedEffectData;
+  CONFIG.SURGE.effectData['poisoned-sickness'] = poisonedSicknessEffectData;
+  CONFIG.SURGE.effectData['poisoned-debilitating'] =
+    poisonedDebilitatingEffectData;
+  CONFIG.SURGE.effectData['poisoned-damage'] = poisonedDamageEffectData;
+  CONFIG.SURGE.effectData['poisoned-deadly'] = poisonedDeadlyEffectData;
+  CONFIG.SURGE.effectData['prone'] = proneEffectData;
+  CONFIG.SURGE.effectData['restrained'] = restrainedEffectData;
+  CONFIG.SURGE.effectData['stunned'] = stunnedEffectData;
+  CONFIG.SURGE.effectData['unconscious'] = unconsciousEffectData;
+  CONFIG.SURGE.effectData['wet'] = wetEffectData;
+
+  console.log('SURGE! | Effect data constants registered.');
+
+  // --- Replace Default Status Effects with Custom Ones ---
+  console.log('SURGE! | Replacing default status effects with custom list...');
+
+  // Map the SURGE_STATUS_EFFECTS array to the required format {id, name, img}
+  const customEffects = SURGE_STATUS_EFFECTS.map((effect) => {
+    let effectData = {
+      id: effect.id,
+      name: effect.label, // Use V12+ name
+      img: effect.icon, // Use V12+ img
+    };
+    // Add overrides specifically for 'confused'
+    if (effect.id === 'confused') {
+      effectData.overrides = ['frightened']; // Assuming 'frightened' is the ID of the Frightened status
+    }
+    // Add overrides specifically for 'flame-resistant'
+    if (effect.id === 'flame-resistant') {
+      effectData.overrides = ['surge-burning']; // Prevent 'surge-burning' status/effect
+    }
+    // Add overrides specifically for 'insulated'
+    if (effect.id === 'insulated') {
+      effectData.overrides = ['chilled']; // Prevent 'chilled' status/effect
+    }
+    if (effect.id === 'wet') {
+      effectData.overrides = ['surge-burning']; // Prevent 'surge-burning' status/effect
+    }
+    return effectData;
+  });
+
+  // Directly assign the mapped array to CONFIG.statusEffects, overwriting the defaults
+  CONFIG.statusEffects = customEffects;
+
+  console.log(
+    `SURGE! | Registered ${CONFIG.statusEffects.length} custom status effects.`
+  );
+  // --- End Status Effect Registration ---
+
+  // Preload Handlebars templates (optional but good practice)
+  // preloadHandlebarsTemplates();
+});
+
 const SURGE_STATUS_EFFECTS = [
   {
     _id: 'CiFbrJB644My1E7a',
@@ -1544,7 +1624,8 @@ export class SurgeCharacterSheet extends ActorSheet {
 
   /**
    * Handle clicking the damage button on a weapon item.
-   * Performs the damage roll using the weapon's damage formula.
+   * Performs the damage roll using the weapon's damage formula
+   * and passes source item info (for condition application) to _performDamageRoll. // <<< UPDATED DOC
    * @param {Event} event The triggering click event.
    * @private
    */
@@ -1566,34 +1647,58 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     const damageFormula = item.system.damage.formula;
     const damageType = item.system.damage.type || 'Physical'; // Default type if missing
+    const conditionToApply = item.system.appliesCondition || '';
     let label = `${item.name} Damage`;
     if (damageType) {
       label += ` (${damageType})`;
     }
 
+    const sourceItemData = {
+      id: item.id,
+      name: item.name,
+      appliesCondition: conditionToApply.trim().toLowerCase(), // Pass condition ID (lowercase, trimmed)
+    };
+
+    console.log(
+      `SURGE | Calling _performDamageRoll. Formula: ${damageFormula}, Label: ${label}, Type: ${damageType}, Source Item Data:`,
+      sourceItemData
+    );
+
     // Call the new damage roll helper
-    await this._performDamageRoll(damageFormula, label, damageType);
+    await this._performDamageRoll(
+      damageFormula,
+      label,
+      damageType,
+      sourceItemData
+    );
   }
 
   /**
-   * Performs a SURGE! system damage roll, adding 'x6', applying to targets,
-   * and including bonus damage for Bleeding or doubling for Broken (Physical).
-   * @param {string} formula        The base damage formula (e.g., "1d6", "2d6+2").
-   * @param {string} label          The label for the chat message flavor.
-   * @param {string} [damageType="Physical"] Optional damage type (defaults to Physical). // Default added
-   * @returns {Promise<void>}       Sends roll result & damage summary to chat, updates targets.
+   * Performs damage roll, applies damage, adds Bleed/Broken bonus,
+   * and applies conditions specified by the source item.
+   * @param {string} formula          Base damage formula
+   * @param {string} label            Chat message flavor
+   * @param {string} [damageType="Physical"] Damage type
+   * @param {object} [sourceItemData={}] Data about the item causing damage
+   * @param {string} sourceItemData.id   ID of the source item
+   * @param {string} sourceItemData.name Name of the source item
+   * @param {string} sourceItemData.appliesCondition Comma-separated string of condition IDs
+   * @returns {Promise<void>}
    * @private
    */
-  async _performDamageRoll(formula, label, damageType = 'Physical') {
-    // Default damage type to Physical
+  async _performDamageRoll(
+    formula,
+    label,
+    damageType = 'Physical',
+    sourceItemData = {}
+  ) {
     console.log(`SURGE | --- _performDamageRoll START ---`);
     console.log(
-      `SURGE | Input Formula: ${formula}, Label: ${label}, Type: ${damageType}`
+      `SURGE | Formula: ${formula}, Label: ${label}, Type: ${damageType}, SourceItem:`,
+      sourceItemData
     );
 
     const surgeFormula = formula.replace(/d6(?![x0-9])/gi, 'd6x6');
-    console.log(`SURGE | Surge Formula: ${surgeFormula}`);
-
     const rollData = this.actor.getRollData() ?? {};
     const roll = new Roll(surgeFormula, rollData);
     const attackerActor = this.actor;
@@ -1601,17 +1706,16 @@ export class SurgeCharacterSheet extends ActorSheet {
     try {
       console.log(`SURGE | Evaluating roll...`);
       await roll.evaluate();
-      const baseRollTotal = roll.total; // Store base roll total
+      const baseRollTotal = roll.total;
       console.log(`SURGE | Roll Evaluated. Base Total: ${baseRollTotal}`);
 
-      // Send the base dice roll to chat first
+      // Send base roll to chat
       console.log(`SURGE | Sending base roll to chat...`);
       try {
         await roll.toMessage({
           speaker: ChatMessage.getSpeaker({ actor: attackerActor }),
           flavor: label,
         });
-        console.log(`SURGE | Base roll message sent.`);
       } catch (rollMsgErr) {
         console.error(`SURGE | Failed to send base roll message:`, rollMsgErr);
       }
@@ -1620,27 +1724,25 @@ export class SurgeCharacterSheet extends ActorSheet {
       const targets = game.user.targets;
       console.log(`SURGE | Targets found: ${targets.size}`, targets);
       if (targets.size === 0) {
-        ui.notifications.warn(
-          'Damage rolled, but no target selected to apply damage.'
-        );
         return;
       }
 
       let chatDamageDetails = [];
+      let chatConditionDetails = [];
 
       console.log(`SURGE | Starting target loop...`);
       for (const targetToken of targets) {
         const targetActor = targetToken.actor;
         if (!targetActor) {
-          /* ... skip ... */ continue;
+          continue;
         }
         console.log(`SURGE | Processing target Actor: ${targetActor.name}`);
 
         let bonusDamage = 0;
-        let damageMultiplier = 1; // Start with multiplier 1
-        let damageNotes = []; // Collect notes like Bleed, Broken
+        let damageMultiplier = 1;
+        let damageNotes = [];
 
-        // Check for Bleeding
+        // Check Bleeding
         const bleedingEffect = targetActor.effects.find(
           (e) =>
             e.changes.some((c) => c.key === 'flags.surge.bleeding') &&
@@ -1651,51 +1753,32 @@ export class SurgeCharacterSheet extends ActorSheet {
             bleedingEffect.flags?.surge?.bleedingDamage ?? 1
           );
           if (bonusDamage <= 0) bonusDamage = 1;
-          console.log(
-            `SURGE | Target <span class="math-inline">\{targetActor\.name\} IS Bleeding\. Bonus Damage\: \+</span>{bonusDamage}`
-          );
           damageNotes.push(`${bonusDamage} Bleed`);
         }
 
-        // Check for Broken and Physical Damage Type
+        // Check Broken
         const isBroken = targetActor.flags?.surge?.broken === true;
-        // Use case-insensitive check, rely on default 'Physical' if type is empty/null
         const isPhysical =
           (damageType || 'Physical').toLowerCase() === 'physical';
-        console.log(
-          `SURGE | Target ${targetActor.name} Is Broken: ${isBroken}, Is Physical Dmg: ${isPhysical}`
-        );
-
         if (isBroken && isPhysical) {
-          console.log(
-            `SURGE | Target ${targetActor.name} is Broken! Doubling Physical damage.`
-          );
-          damageMultiplier = 2; // Set multiplier to 2
+          damageMultiplier = 2;
           damageNotes.push(`x2 Broken`);
         }
 
-        // Calculate final damage: (Base Roll + Bleed Bonus) * Multiplier (for Broken)
+        // Calculate and Apply Damage
         const finalDamage = Math.max(
           0,
           (baseRollTotal + bonusDamage) * damageMultiplier
         );
         console.log(
-          `SURGE | Calculated final damage for ${targetActor.name}: ${finalDamage} (Roll: ${baseRollTotal}, Bonus: ${bonusDamage}, Multiplier: ${damageMultiplier})`
+          `SURGE | Calculated final damage for ${targetActor.name}: ${finalDamage}`
         );
-
-        // Apply damage update
         const currentHp = targetActor.system.passives.hp.value;
-        console.log(
-          `SURGE | Target ${targetActor.name} current HP: ${currentHp}`
-        );
         if (typeof currentHp === 'number') {
           const newHp = Math.max(0, currentHp - finalDamage);
-          console.log(`SURGE | Updating ${targetActor.name} HP to: ${newHp}`);
           try {
             await targetActor.update({ 'system.passives.hp.value': newHp });
-            console.log(
-              `SURGE | Actor HP update successful for ${targetActor.name}.`
-            );
+            console.log(`SURGE | Updated ${targetActor.name} HP to ${newHp}`);
             // Build chat detail string
             let detail = `${targetToken.name} takes ${finalDamage}`;
             if (damageNotes.length > 0) {
@@ -1704,33 +1787,140 @@ export class SurgeCharacterSheet extends ActorSheet {
             detail += ` damage.`;
             chatDamageDetails.push(detail);
           } catch (updateErr) {
-            /* ... error log ... */
+            console.error(updateErr);
           }
         } else {
-          /* ... error log ... */
+          console.error('Error processing HP change');
         }
+
+        // --- Apply Conditions from Item ---
+        const conditionIdsToApply = (sourceItemData?.appliesCondition || '')
+          .split(',') // Split string by comma
+          .map((id) => id.trim().toLowerCase()) // Trim whitespace, lowercase
+          .filter((id) => id); // Remove empty strings
+
+        if (conditionIdsToApply.length > 0) {
+          console.log(
+            `SURGE | Item "${sourceItemData.name}" attempting to apply conditions:`,
+            conditionIdsToApply
+          );
+          let conditionsAppliedThisHit = []; // Track conditions applied by this specific hit
+
+          for (const conditionId of conditionIdsToApply) {
+            console.log(
+              `SURGE | Checking condition: ${conditionId} for ${targetActor.name}`
+            );
+            // Look up effect data from CONFIG
+            const effectBaseData = CONFIG.SURGE?.effectData?.[conditionId];
+            if (!effectBaseData) {
+              console.warn(
+                `SURGE | No effect data found in CONFIG.SURGE.effectData for condition ID: ${conditionId}`
+              );
+              continue; // Skip if data not found
+            }
+
+            // Perform Stacking Check (customize per condition if needed)
+            let shouldApply = true;
+            // Example: Generic check for non-stacking poisons based on type flag
+            if (conditionId.startsWith('poisoned-')) {
+              const poisonType = conditionId.split('-')[1]; // Extract type (sickness, damage, etc.)
+              const alreadyHasPoisonType = targetActor.effects.some((e) =>
+                e.changes.some(
+                  (c) =>
+                    c.key === 'flags.surge.poisonType' && c.value === poisonType
+                )
+              );
+              if (alreadyHasPoisonType) {
+                console.log(
+                  `SURGE | Target already has ${poisonType} poison. Skipping ${conditionId}.`
+                );
+                shouldApply = false;
+              }
+            }
+            // Check for Bleeding flag
+            else if (conditionId === 'bleeding') {
+              const alreadyBleeding = targetActor.effects.some((e) =>
+                e.changes.some((c) => c.key === 'flags.surge.bleeding')
+              );
+              if (alreadyBleeding) {
+                console.log(`SURGE | Target already Bleeding. Skipping.`);
+                shouldApply = false;
+              }
+            }
+
+            // Check for Broken flag
+            else if (conditionId === 'broken') {
+              const alreadyBroken = targetActor.effects.some((e) =>
+                e.changes.some((c) => c.key === 'flags.surge.broken')
+              );
+              if (alreadyBroken) {
+                console.log(`SURGE | Target already Broken. Skipping.`);
+                shouldApply = false;
+              }
+            }
+            // Add more specific stacking checks here for other conditions if needed
+
+            if (shouldApply) {
+              try {
+                // Clone data to avoid modifying constant; apply specific duration if needed (TBD)
+                const dataToCreate = foundry.utils.deepClone(effectBaseData);
+                // If effect needs dynamic duration/flags based on source item, modify dataToCreate here
+
+                await ActiveEffect.create(dataToCreate, {
+                  parent: targetActor,
+                });
+                conditionsAppliedThisHit.push(
+                  effectBaseData.name || conditionId
+                ); // Add name/ID to list
+                console.log(
+                  `SURGE | Applied ${conditionId} effect to ${targetActor.name}.`
+                );
+              } catch (applyErr) {
+                console.error(
+                  `SURGE | Failed to apply effect ${conditionId} to ${targetActor.name}:`,
+                  applyErr
+                );
+              }
+            }
+          } // End loop through condition IDs
+
+          if (conditionsAppliedThisHit.length > 0) {
+            chatConditionDetails.push(
+              `${targetToken.name} gains ${conditionsAppliedThisHit.join(
+                ', '
+              )}.`
+            );
+          }
+        } // --- END Apply Conditions ---
       } // --- END TARGET LOOP ---
       console.log(`SURGE | Finished target loop.`);
 
-      // --- Send summary damage application message ---
-      console.log(
-        `SURGE | Preparing summary chat message. Details array:`,
-        chatDamageDetails
-      );
-      if (chatDamageDetails.length > 0) {
+      // --- Send summary messages ---
+      if (chatDamageDetails.length > 0 || chatConditionDetails.length > 0) {
+        let summaryContent = '';
+        if (chatDamageDetails.length > 0) {
+          summaryContent += `<strong>Damage Applied:</strong><br>${chatDamageDetails.join(
+            '<br>'
+          )}`;
+        }
+        if (chatConditionDetails.length > 0) {
+          if (summaryContent) summaryContent += '<br>'; // Add separator if damage was also listed
+          summaryContent += `<strong>Conditions Applied:</strong><br>${chatConditionDetails.join(
+            '<br>'
+          )}`;
+        }
         try {
           await ChatMessage.create({
             speaker: ChatMessage.getSpeaker({ actor: attackerActor }),
-            content: `<strong>Damage Applied:</strong><br>${chatDamageDetails.join(
-              '<br>'
-            )}`,
+            content: summaryContent,
           });
-          console.log(`SURGE | Summary damage message sent.`);
+          console.log(`SURGE | Summary damage/condition message sent.`);
         } catch (summaryMsgErr) {
-          /* ... */
+          console.error(
+            `SURGE | Failed to send summary message:`,
+            summaryMsgErr
+          );
         }
-      } else {
-        /* ... */
       }
     } catch (err) {
       console.error(
@@ -3042,53 +3232,6 @@ Actors.registerSheet(
     label: 'SURGE! - Character Sheet', // Name displayed in the sheet selection dropdown
   }
 );
-
-// You can add Hooks here for system setup, migrations, etc.
-Hooks.once('init', () => {
-  console.log('SURGE! | System Initializing...');
-
-  // --- Replace Default Status Effects with Custom Ones ---
-  console.log('SURGE! | Replacing default status effects with custom list...');
-
-  // Map the SURGE_STATUS_EFFECTS array to the required format {id, name, img}
-  const customEffects = SURGE_STATUS_EFFECTS.map((effect) => {
-    let effectData = {
-      id: effect.id,
-      name: effect.label, // Use V12+ name
-      img: effect.icon, // Use V12+ img
-    };
-    // Add overrides specifically for 'confused'
-    if (effect.id === 'confused') {
-      effectData.overrides = ['frightened']; // Assuming 'frightened' is the ID of the Frightened status
-    }
-    // Add overrides specifically for 'flame-resistant'
-    if (effect.id === 'flame-resistant') {
-      effectData.overrides = ['surge-burning']; // Prevent 'surge-burning' status/effect
-    }
-    // Add overrides specifically for 'insulated'
-    if (effect.id === 'insulated') {
-      effectData.overrides = ['chilled']; // Prevent 'chilled' status/effect
-    }
-    if (effect.id === 'wet') {
-      effectData.overrides = ['surge-burning']; // Prevent 'surge-burning' status/effect
-    }
-    return effectData;
-  });
-
-  // Directly assign the mapped array to CONFIG.statusEffects, overwriting the defaults
-  CONFIG.statusEffects = customEffects;
-
-  console.log(
-    `SURGE! | Registered ${CONFIG.statusEffects.length} custom status effects.`
-  );
-  // --- End Status Effect Registration ---
-
-  // Add system-specific configuration settings, constants, etc. here if needed
-  // CONFIG.SURGE = { /* custom config data */ };
-
-  // Preload Handlebars templates (optional but good practice)
-  // preloadHandlebarsTemplates();
-});
 
 // Example function for preloading templates (call in init hook)
 // async function preloadHandlebarsTemplates() {

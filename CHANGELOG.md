@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.7.1] - 2025-05-05
+
+### ✨ Features
+
+- Implemented functionality for Weapon items to automatically apply specified conditions (single or multiple, comma-separated) to targeted actors upon dealing damage. Logic added to `_performDamageRoll`.
+
+### 🔧 Maintenance
+
+- Made Active Effect data constants (`bleedingEffectData`, etc.) accessible via `CONFIG.SURGE.effectData` for use in automation hooks/functions.
+- Updated `_onItemDamageRoll` to pass necessary source item data (including `appliesCondition` string) to `_performDamageRoll`.
+- Added prerequisite check (Restrained/Prone) to "Apply Pinned" macro.
+- Added interaction checks/logic to relevant condition application macros (e.g., Wet removes Flammable, Confused removes Frightened, Insulated/Wet block Burning/Chilled).
+
 ## [0.7.01] - 2025-05-05
 
 ### ✨ Features

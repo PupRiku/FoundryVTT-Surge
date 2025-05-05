@@ -144,6 +144,18 @@
               />
             </div>
           </div>
+          <div class='form-group'>
+            <label>Applies Condition ID</label>
+            <input
+              type='text'
+              name='system.appliesCondition'
+              value='{{systemData.appliesCondition.value}}'
+              placeholder='e.g., bleeding, broken'
+              title='Enter condition IDs separated by commas (if any).'
+            />
+            <small>
+              (Comma-separated, e.g., "bleeding, stunned". Leave blank if none.)</small>
+          </div>
           <div class='grid grid-3col'>
             <div class='form-group'>
               <label>Actions (Attack)</label>

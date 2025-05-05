@@ -12,20 +12,20 @@ This system is currently **under active development** (pre-release) but now incl
 
 ## Installation
 
-**Important:** This system is currently in a pre-release state (v0.7.01). Features may be incomplete or change. Use with caution!
+**Important:** This system is currently in a pre-release state (v0.7.1). Features may be incomplete or change. Use with caution!
 
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field at the bottom, paste the following URL for the **v0.7.01** release:
+4.  In the "Manifest URL" field at the bottom, paste the following URL for the **v0.7.1** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.7.01/system.json
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.7.1/system.json
     ```
 5.  Click "Install".
 
 Foundry will download and install the system. You can then create a new world using the SURGE! system.
 
-## Current Features (as of v0.7.01)
+## Current Features (as of v0.7.1)
 
 - **Basic System Structure:** `system.json` manifest, `template.json` data models (Character, various Item types). Basic CSS styling. Includes Macro Compendium pack.
 - **Character Sheet:**
@@ -53,6 +53,7 @@ Foundry will download and install the system. You can then create a new world us
     - **Damage/Healing Interactions:** Damage removes Stunned (via `updateActor` hook), Escalating Damage/Turn (Burning, Bleeding via `updateCombat` hook), Damage/Turn (Frozen, Damage Poison via `updateCombat` hook), Damage on Move (Chilled via `updateToken` hook), Damage Vulnerability (Flammable doubles Burning, Broken doubles Physical via `_performDamageRoll`), Damage Immunity (Flame Resistant prevents Burning via macro).
     - **Condition Interactions:** Confused prevents Frightened (via status `overrides`), Wet prevents Burning (via override/macro), Wet removes Flammable (via macro), Insulated prevents Chilled (via override/macro), Insulated removes Frozen (via `updateCombat` hook), Incapacitated/Stunned/Unconscious apply Prone (via macro).
     - **Complex Conditions:** Confused (random start-of-turn behavior via hook/chat), Poisoned subtypes (Sickness/Debilitating apply random secondary effects/durations via macro; Deadly triggers HP 0 + Incapacitated after 5 combat turns via hook).
+    - **Weapon Interactions:** Added a field in the the item sheet to specify conditions a weapon will apply when damaging a target. This will automatically apply the condition(s).
   - **GM Adjudication:** Many conditions rely on GM ruling for effects not easily automated (e.g., action restrictions for Frightened/Paralyzed/Stunned/Unconscious/Mute, perception checks for Invisible/Deafened, immunities for Flame Resistant/Insulated, specific remedies like Patch Up/Break Free/Heat Sources). Descriptions added to effects as reminders.
   - **Macros:** Compendium pack created ("SURGE! Condition Macros") containing macros to apply each condition (including prerequisite/stacking checks and input dialogs where needed).
   - **Workarounds:** Implemented workarounds/notes for known core Foundry bugs (e.g., round duration expiry).

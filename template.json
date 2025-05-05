@@ -105,8 +105,11 @@
       "actionsAttack": 1,
       "actionsReload": 0,
       "range": "",
-      "appliedStatusEffects": [],
-      "appliedConditions": [],
+      "appliesCondition": {
+        "type": "String",
+        "label": "Applies Condition ID",
+        "value": ""
+      },
       "damage": {
         "formula": "1d6",
         "type": "Physical"
