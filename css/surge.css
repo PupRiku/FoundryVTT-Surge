@@ -798,3 +798,13 @@
   color: #2e8a2e; /* Darker green on hover */
   text-shadow: 0 0 5px #8fec8f;
 }
+
+.chat-message .dice-roll .dice-total {
+  flex: 1 1 auto; /* Allow shrinking/growing, use auto basis */
+  /* OR try just: flex: initial; */
+  /* Ensure width isn't constrained */
+  width: auto;
+  /* Reset potential text-breaking properties if needed */
+  white-space: normal;
+  word-break: normal;
+}

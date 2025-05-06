@@ -31,6 +31,7 @@ Hooks.once('init', () => {
   // Ensure the variables like bleedingEffectData are defined/accessible here
   CONFIG.SURGE.effectData['bleeding'] = bleedingEffectData;
   CONFIG.SURGE.effectData['broken'] = brokenEffectData;
+  CONFIG.SURGE.effectData['burning'] = burningEffectData;
   CONFIG.SURGE.effectData['chilled'] = chilledEffectData;
   CONFIG.SURGE.effectData['confused'] = confusedEffectData;
   CONFIG.SURGE.effectData['crushed'] = crushedEffectData;
@@ -1226,6 +1227,13 @@ export class SurgeCharacterSheet extends ActorSheet {
       .find('.item-roll-damage')
       .click(this._onItemDamageRoll.bind(this));
 
+    // --- Spellbook Tab Listeners ---
+    const spellbookTab = html.find('.tab.spellbook'); // <<< Find new tab
+    spellbookTab.find('.item-cast').click(this._onItemCast.bind(this)); // <<< Target cast button here
+    // Add Edit/Delete listeners specifically for spells in this tab too
+    spellbookTab.find('.item-edit').click(this._onItemEdit.bind(this));
+    spellbookTab.find('.item-delete').click(this._onItemDelete.bind(this));
+
     // --- Custom Effect Control Listeners ---
     // Find controls ONLY inside the Effects tab
     const effectsTab = html.find('.tab.effects');
@@ -1641,6 +1649,295 @@ export class SurgeCharacterSheet extends ActorSheet {
   }
 
   /**
+   * Handle clicking the "Cast Spell" button on an item in the inventory.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onItemCast(event) {
+    event.preventDefault();
+    console.log('SURGE | _onItemCast triggered');
+
+    const element = event.currentTarget;
+    const li = element.closest('.item');
+    const itemId = li?.dataset?.itemId;
+    const spell = this.actor.items.get(itemId);
+
+    if (!spell || spell.type !== 'spell') return;
+    console.log(`SURGE | Attempting to cast: ${spell.name}`);
+
+    // Check Mute Condition
+    if (this.actor.flags?.surge?.mute === true) {
+      ui.notifications.warn(
+        `${this.actor.name} cannot cast spells while Mute.`
+      );
+      return;
+    }
+
+    // Get Targets (can be empty for self/area spells)
+    const targets = game.user.targets;
+    console.log(`SURGE | Targets for spell: ${targets.size}`, targets);
+
+    // Action Cost / Multi-turn casting (Manual for now)
+    ui.notifications.info(
+      `Casting ${spell.name}... (Action cost/Focus/Multi-turn TBD)`
+    );
+
+    // *** Create sourceItemData from the spell ***
+    const sourceItemData = {
+      id: spell.id,
+      name: spell.name,
+      appliesCondition: spell.system.appliesCondition?.value || '', // Read from spell object
+    };
+
+    // Effect application results (for summary message)
+    let effectsAppliedDetails = [];
+    let successes = 0;
+
+    // --- Handle Targeted Spells (Requires Contest) ---
+    if (targets.size > 0) {
+      console.log(`SURGE | Performing contested rolls against targets...`);
+      for (const targetToken of targets) {
+        const targetActor = targetToken.actor;
+        if (!targetActor) continue;
+
+        // Perform the contest
+        const success = await this._performContestedSpellRoll(
+          spell,
+          targetActor
+        );
+        if (success) {
+          successes++;
+          console.log(
+            `SURGE | Spell successful against ${targetActor.name}. Applying effects...`
+          );
+          // Apply Damage, Healing, Conditions to this targetActor
+          const effectResult = await this._applySpellEffects(
+            spell,
+            targetActor,
+            sourceItemData
+          );
+          effectsAppliedDetails.push(
+            `${targetToken.name}: ${
+              effectResult || 'Success (No specific effect)'
+            }`
+          );
+        } else {
+          console.log(`SURGE | Spell failed against ${targetActor.name}`);
+          effectsAppliedDetails.push(`${targetToken.name}: Defended`);
+        }
+      }
+      console.log(`SURGE | Spell affected ${successes} targets.`);
+
+      // --- Handle Self / Area / No Target Spells --- (Basic - assumes success if no contest needed)
+    } else {
+      // Check spell range/target type to decide if it affects self or needs different handling
+      const range = spell.system.range?.value?.toLowerCase() || '';
+      const targetType = spell.system.target?.value?.toLowerCase() || '';
+
+      if (range === 'self' || targetType === 'self') {
+        console.log(
+          `SURGE | Spell targets Self. Applying effects to ${this.actor.name}...`
+        );
+        const effectResult = await this._applySpellEffects(
+          spell,
+          this.actor,
+          sourceItemData
+        ); // Apply to caster
+        effectsAppliedDetails.push(
+          `Self: ${effectResult || 'Success (No specific effect)'}`
+        );
+      } else {
+        // Need logic for Area of Effect spells or utility spells without targets later
+        console.log(
+          `SURGE | Spell has no targets and is not Self-cast. Effect application TBD.`
+        );
+        effectsAppliedDetails.push(`(No target specified/required)`);
+      }
+    }
+
+    // --- Final Summary Message (Optional) ---
+    if (effectsAppliedDetails.length > 0) {
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: `<strong>${
+          spell.name
+        } Cast Results:</strong><br>${effectsAppliedDetails.join('<br>')}`,
+      });
+    }
+
+    console.log('SURGE | _onItemCast finished');
+  }
+
+  // --- NEW HELPER: Apply Standard Spell Effects ---
+  // Add this helper method inside SurgeCharacterSheet class
+  /**
+   * Applies common spell effects (damage, healing, conditions) to a target actor.
+   * @param {Item} spell         The spell item document.
+   * @param {Actor} targetActor The actor to apply effects to.
+   * @returns {Promise<string>} A summary string of effects applied.
+   * @private
+   */
+  async _applySpellEffects(spell, targetActor, sourceItemData = {}) {
+    if (!spell || !targetActor) return '';
+
+    let results = [];
+
+    // --- Apply Damage ---
+    const damageFormula = spell.system.damage?.formula?.value;
+    if (damageFormula) {
+      console.log(
+        `SURGE | Applying spell damage from ${spell.name} to ${targetActor.name}`
+      );
+      const damageType = spell.system.damage?.type?.value || 'Unknown';
+      // Call _performDamageRoll - NOTE: This internally gets targets again, which isn't ideal.
+      // We might want a different function `_applyDamageDirectly(damageRoll, damageType, targetActor)` later.
+      // For now, re-using _performDamageRoll requires the user to TARGET the actor again.
+      // Let's simplify for now and apply damage directly here.
+
+      const roll = await new Roll(
+        damageFormula.replace(/d6(?![x0-9])/gi, 'd6x6')
+      ).evaluate(); // Apply surge if needed? Assume yes.
+      const baseDamage = roll.total;
+      let finalDamage = baseDamage; // Start with base
+
+      // Check Bleeding on target (if _performDamageRoll isn't called)
+      // Check Broken on target (if _performDamageRoll isn't called & type is physical)
+      // Check resistances/vulnerabilities? Needs framework.
+
+      console.log(
+        `SURGE | Applying ${finalDamage} ${damageType} damage directly to ${targetActor.name}`
+      );
+      const currentHp = targetActor.system.passives.hp.value;
+      if (typeof currentHp === 'number') {
+        const newHp = Math.max(0, currentHp - finalDamage);
+        await targetActor.update({ 'system.passives.hp.value': newHp });
+        results.push(`${finalDamage} ${damageType} Damage`);
+        // Optional scrolling text: canvas.interface.createScrollingText(...)
+      }
+    }
+
+    // --- Apply Healing ---
+    const healingFormula = spell.system.healing?.formula?.value;
+    if (healingFormula) {
+      console.log(
+        `SURGE | Applying spell healing from ${spell.name} to ${targetActor.name}`
+      );
+      const healRoll = await new Roll(healingFormula).evaluate(); // No surge on healing? Assume no.
+      const healingAmount = healRoll.total;
+      if (healingAmount > 0) {
+        const currentHp = targetActor.system.passives.hp.value;
+        const maxHp = targetActor.system.passives.hp.max; // Need maxHp
+        if (typeof currentHp === 'number' && typeof maxHp === 'number') {
+          const newHp = Math.min(maxHp, currentHp + healingAmount); // Don't exceed max HP
+          await targetActor.update({ 'system.passives.hp.value': newHp });
+          results.push(`${healingAmount} Healing`);
+          console.log(`SURGE | Healed ${targetActor.name} to ${newHp} HP.`);
+          // Optional scrolling text
+        }
+      }
+    }
+
+    // --- Apply Conditions ---
+    const conditionIdsToApply = (sourceItemData?.appliesCondition || '')
+      .split(',')
+      .map((id) => id.trim().toLowerCase())
+      .filter((id) => id);
+
+    console.log(
+      `SURGE DEBUG (_applySpellEffects) | Conditions to check on ${targetActor.name}:`,
+      conditionIdsToApply
+    ); // Log IDs found
+
+    if (conditionIdsToApply.length > 0) {
+      console.log(
+        `SURGE | Spell ${spell.name} attempting to apply conditions:`,
+        conditionIdsToApply
+      );
+      let appliedConds = [];
+      for (const conditionId of conditionIdsToApply) {
+        console.log(
+          `SURGE DEBUG (_applySpellEffects) | Processing conditionId: "${conditionId}"`
+        );
+        // Look up effect data from CONFIG
+        const effectBaseData = CONFIG.SURGE?.effectData?.[conditionId];
+        console.log(
+          `SURGE DEBUG (_applySpellEffects) | Found effectBaseData:`,
+          effectBaseData
+        ); // Log data found
+
+        if (!effectBaseData) {
+          console.warn(
+            `SURGE | No effect data found in CONFIG.SURGE.effectData for condition ID: ${conditionId}`
+          );
+          continue; // Skip if data not found
+        }
+        // --- Stacking Check --- (Needs specific logic per condition type)
+        let shouldApply = true;
+        console.log(
+          `SURGE DEBUG (_applySpellEffects) | Checking stacking for ${conditionId}...`
+        );
+        // Example: Generic check for non-stacking poisons based on type flag
+        if (conditionId.startsWith('poisoned-')) {
+          const poisonType = conditionId.split('-')[1];
+          const alreadyHasPoisonType = targetActor.effects.some((e) =>
+            e.changes.some(
+              (c) =>
+                c.key === 'flags.surge.poisonType' && c.value === poisonType
+            )
+          );
+          if (alreadyHasPoisonType) {
+            shouldApply = false;
+          }
+        }
+        // Example: Check for Bleeding flag
+        else if (conditionId === 'bleeding') {
+          const alreadyBleeding = targetActor.effects.some((e) =>
+            e.changes.some((c) => c.key === 'flags.surge.bleeding')
+          );
+          if (alreadyBleeding) {
+            shouldApply = false;
+          }
+        }
+        // Add other checks (e.g., for Crushed, Frozen, etc. if they shouldn't stack)
+        console.log(
+          `SURGE DEBUG (_applySpellEffects) | Should Apply ${conditionId}? ${shouldApply}`
+        );
+
+        if (shouldApply) {
+          try {
+            const dataToCreate = foundry.utils.deepClone(effectBaseData);
+            // Apply spell-specific duration? Need duration field on spell item & logic here. Using default AE duration for now.
+            console.log(
+              `SURGE DEBUG (_applySpellEffects) | Creating ActiveEffect for ${conditionId} with data:`,
+              dataToCreate
+            );
+            await ActiveEffect.create(dataToCreate, { parent: targetActor });
+            appliedConds.push(effectBaseData.name || conditionId); // Add name/ID to list
+            console.log(
+              `SURGE | Applied ${conditionId} effect via spell to ${targetActor.name}.`
+            );
+          } catch (applyErr) {
+            console.error(
+              `SURGE | Failed to apply effect ${conditionId} to ${targetActor.name}:`,
+              applyErr
+            );
+          }
+        } else {
+          console.log(
+            `SURGE | Skipping application of ${conditionId} due to stacking rules.`
+          );
+        }
+      }
+
+      if (appliedConds.length > 0) {
+        results.push(`Applies ${appliedConds.join(', ')}`);
+      }
+    }
+
+    return results.join('; '); // Return summary string
+  } // --- End _applySpellEffects ---
+
+  /**
    * Handle clicking the damage button on a weapon item.
    * Performs the damage roll using the weapon's damage formula
    * and passes source item info (for condition application) to _performDamageRoll. // <<< UPDATED DOC
@@ -1950,6 +2247,135 @@ export class SurgeCharacterSheet extends ActorSheet {
       );
     }
     console.log(`SURGE | --- _performDamageRoll END ---`);
+  }
+
+  /**
+   * Performs the contested roll for spellcasting using SURGE rules.
+   * Caster: [Mystic Dice]d6x6 + [Mystic Mod] + [INT Level]
+   * Defender: [Attr Dice]d6x6 + [Attr Mod] (+ [INT Level] if Mystic)
+   * @param {Item} spell         The spell Item document being cast.
+   * @param {Actor} targetActor  The target Actor document.
+   * @returns {Promise<boolean>} True if the caster wins or ties the contest, false otherwise.
+   * @private
+   */
+  async _performContestedSpellRoll(spell, targetActor) {
+    console.log(
+      `SURGE | Performing contested roll: ${this.actor.name} vs ${targetActor.name} for spell ${spell.name}`
+    );
+    const casterActor = this.actor;
+
+    // --- Caster's Roll ---
+    const casterMysticLevel = casterActor.system.skills.mystic?.value ?? 1;
+    const casterIntLevel = casterActor.system.attributes.int?.value ?? 0;
+    const casterRollData = this._rollTable[casterMysticLevel]; // Use sheet's _rollTable
+    const casterDice = casterRollData?.dice ?? 1; // Get dice count
+    const casterMysticMod = casterRollData?.mod ?? 0; // Get modifier
+    let casterFormulaParts = [`${casterDice}d6x6`]; // Start with dice
+    if (casterMysticMod !== 0)
+      casterFormulaParts.push(casterMysticMod.toString()); // Add mod if non-zero
+    if (casterIntLevel !== 0)
+      casterFormulaParts.push(casterIntLevel.toString()); // Add INT level if non-zero
+    const casterFormula = casterFormulaParts.join(' + '); // Join with plus signs
+
+    console.log(
+      `SURGE | Caster Roll Formula: ${casterFormula} (Mystic Lvl ${casterMysticLevel} -> ${casterDice}d6x6+${casterMysticMod}, INT Lvl ${casterIntLevel})`
+    );
+    const casterRoll = await new Roll(casterFormula).evaluate();
+    console.log(`SURGE | Caster Rolled: ${casterRoll.total}`);
+
+    // --- Defender's Roll ---
+    const defenderAttrKey = spell.system.defenderAttribute?.value || 'mystic';
+    let defenderFormula = '';
+    let defenderFlavor = '';
+    let defenderRollData = null;
+    let defenderDice = 1; // Default dice
+    let defenderBaseMod = 0; // Default mod
+    let defenderIntLevel = 0; // Default INT bonus
+
+    console.log(`SURGE | Defender using attribute key: ${defenderAttrKey}`);
+
+    if (defenderAttrKey === 'mystic') {
+      const defenderMysticLevel = targetActor.system.skills.mystic?.value ?? 1;
+      defenderIntLevel = targetActor.system.attributes.int?.value ?? 0; // Get defender INT
+      defenderRollData = this._rollTable[defenderMysticLevel];
+      defenderDice = defenderRollData?.dice ?? 1;
+      defenderBaseMod = defenderRollData?.mod ?? 0;
+      defenderFlavor = `Mystic Lvl ${defenderMysticLevel} (Mod ${defenderBaseMod}) + INT Lvl ${defenderIntLevel}`;
+    } else if (targetActor.system.attributes[defenderAttrKey]) {
+      // Defending with a base attribute
+      const defenderAttrLevel =
+        targetActor.system.attributes[defenderAttrKey].value ?? 1;
+      defenderRollData = this._rollTable[defenderAttrLevel];
+      defenderDice = defenderRollData?.dice ?? 1;
+      defenderBaseMod = defenderRollData?.mod ?? 0;
+      // No INT bonus for non-Mystic defense unless specified otherwise
+      defenderFlavor = `${defenderAttrKey.toUpperCase()} Lvl ${defenderAttrLevel} (Mod ${defenderBaseMod})`;
+    } else {
+      // Invalid defender attribute specified, default to basic 1d6x6? Or Mystic? Use Mystic default.
+      console.warn(
+        `SURGE | Invalid defenderAttribute "${defenderAttrKey}" on spell ${spell.name}. Defaulting to Mystic+INT.`
+      );
+      const defenderMysticLevel = targetActor.system.skills.mystic?.value ?? 1;
+      defenderIntLevel = targetActor.system.attributes.int?.value ?? 0;
+      defenderRollData = this._rollTable[defenderMysticLevel];
+      defenderDice = defenderRollData?.dice ?? 1;
+      defenderBaseMod = defenderRollData?.mod ?? 0;
+      defenderFlavor = `(Defaulted) Mystic Lvl ${defenderMysticLevel} (Mod ${defenderBaseMod}) + INT Lvl ${defenderIntLevel}`;
+    }
+
+    // Construct defender formula carefully
+    let defenderFormulaParts = [`${defenderDice}d6x6`];
+    if (defenderBaseMod !== 0)
+      defenderFormulaParts.push(defenderBaseMod.toString());
+    // Add INT bonus only if defending with Mystic (or if defaulted to Mystic)
+    if (
+      (defenderAttrKey === 'mystic' ||
+        !targetActor.system.attributes[defenderAttrKey]) &&
+      defenderIntLevel !== 0
+    ) {
+      defenderFormulaParts.push(defenderIntLevel.toString());
+    }
+    defenderFormula = defenderFormulaParts.join(' + ');
+
+    console.log(`SURGE | Defender Roll Formula: ${defenderFormula}`);
+    const defenderRoll = await new Roll(defenderFormula).evaluate();
+    console.log(`SURGE | Defender Rolled: ${defenderRoll.total}`);
+
+    // --- Compare Rolls & Determine Success ---
+    const success = casterRoll.total >= defenderRoll.total; // Caster wins on tie
+    console.log(
+      `SURGE | Contest Result: ${casterRoll.total} vs ${defenderRoll.total}. Caster Success: ${success}`
+    );
+
+    // --- Post Contested Roll to Chat ---
+    let chatContent = `
+    <div class="dice-roll">
+        <div class="dice-formula">Spell Contest: ${spell.name}</div>
+        <div class="dice-tooltip" style="display: block;">
+            <div>Caster (${
+              casterActor.name
+            }): ${casterFormula} -> <strong>Rolled ${
+      casterRoll.total
+    }</strong></div>
+            <div>Defender (${
+              targetActor.name
+            }): ${defenderFormula} (${defenderFlavor}) -> <strong>Rolled ${
+      defenderRoll.total
+    }</strong></div>
+        </div>
+        <h4 class="dice-total" style="margin-top: 5px;">${
+          success
+            ? `${casterActor.name} Succeeds!`
+            : `${targetActor.name} Defends!`
+        }</h4>
+    </div>`;
+
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: casterActor }),
+      content: chatContent,
+    });
+
+    return success;
   }
 
   /**

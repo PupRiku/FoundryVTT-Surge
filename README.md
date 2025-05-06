@@ -12,24 +12,24 @@ This system is currently **under active development** (pre-release) but now incl
 
 ## Installation
 
-**Important:** This system is currently in a pre-release state (v0.7.1). Features may be incomplete or change. Use with caution!
+**Important:** This system is currently in a pre-release state (v0.8.0). Features may be incomplete or change. Use with caution!
 
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field at the bottom, paste the following URL for the **v0.7.1** release:
+4.  In the "Manifest URL" field at the bottom, paste the following URL for the **v0.8.0** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.7.1/system.json
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.8.0/system.json
     ```
 5.  Click "Install".
 
 Foundry will download and install the system. You can then create a new world using the SURGE! system.
 
-## Current Features (as of v0.7.1)
+## Current Features (as of v0.8.0)
 
 - **Basic System Structure:** `system.json` manifest, `template.json` data models (Character, various Item types). Basic CSS styling. Includes Macro Compendium pack.
 - **Character Sheet:**
-  - Functional sheet window with Header (Name, Image, Level, Passives Grid) and Tabs (Main, Inventory, Biography, Effects).
+  - Functional sheet window with Header (Name, Image, Level, Passives Grid) and Tabs (Main, Inventory, Spellbook, Biography, Effects).
   - **Header:** Displays core info; Total Menace updates automatically.
   - **Main Tab:** Displays Attributes and Skills with editable fields and rollable labels.
   - **Inventory Tab:** Categorized item display (Weapons, Armor/Shields, Gear) with functional Edit, Delete, Equip/Unequip controls. Attack/Damage roll buttons on weapons.
@@ -40,12 +40,14 @@ Foundry will download and install the system. You can then create a new world us
   - Common fields (Name, Image, Description, Qty, Wt, Price).
   - Type-specific fields for Weapons (Damage, Range, Skill, Type, etc.).
   - Type-specific fields for Armor & Shields.
+  - Fields & layout for "spell" type items.
 - **Dice Rolling & Mechanics:**
   - Core SURGE! roll mechanic (`Xd6x6+Y` lookup + `x6` SURGING) via `_performRoll`.
   - Attribute/Skill checks rollable from Actor Sheet.
   - Weapon Attack/Damage rolls triggerable from Inventory, calculating damage via `_performDamageRoll`.
   - Defense rolls (Melee, Ranged, Magic) triggerable via Ctrl+Click.
-  * Rolls incorporate applicable bonuses/penalties from stats and equipped items.
+  - Rolls incorporate applicable bonuses/penalties from stats and equipped items.
+  - Contested rolls for spellcasting.
 - **Status Effects & Conditions:**
   - Dynamic registration of system-specific status effect icons, replacing core defaults.
   - Implementation of numerous conditions with automated mechanics where practical:
@@ -54,27 +56,29 @@ Foundry will download and install the system. You can then create a new world us
     - **Condition Interactions:** Confused prevents Frightened (via status `overrides`), Wet prevents Burning (via override/macro), Wet removes Flammable (via macro), Insulated prevents Chilled (via override/macro), Insulated removes Frozen (via `updateCombat` hook), Incapacitated/Stunned/Unconscious apply Prone (via macro).
     - **Complex Conditions:** Confused (random start-of-turn behavior via hook/chat), Poisoned subtypes (Sickness/Debilitating apply random secondary effects/durations via macro; Deadly triggers HP 0 + Incapacitated after 5 combat turns via hook).
     - **Weapon Interactions:** Added a field in the the item sheet to specify conditions a weapon will apply when damaging a target. This will automatically apply the condition(s).
+  - **Spellcasting:**
+    - Defined "spell" item type with comprehensive data fields (School, Casting Time, Range, Target, Duration, Focus req., Defender Attr., Damage/Heal/Condition effects).
+    - Item sheet supports viewing/editing spell data.
+    - Actor sheet includes a "Spellbook" tab listing owned spells.
+    - "Cast" button on spell items initiates casting process.
+    - Implemented core contested roll mechanic (Mystic+INT vs Defender).
+    - Basic application of damage, healing, and conditions from spells upon successful cast against targets.
+    - Mute condition prevents casting.
   - **GM Adjudication:** Many conditions rely on GM ruling for effects not easily automated (e.g., action restrictions for Frightened/Paralyzed/Stunned/Unconscious/Mute, perception checks for Invisible/Deafened, immunities for Flame Resistant/Insulated, specific remedies like Patch Up/Break Free/Heat Sources). Descriptions added to effects as reminders.
   - **Macros:** Compendium pack created ("SURGE! Condition Macros") containing macros to apply each condition (including prerequisite/stacking checks and input dialogs where needed).
   - **Workarounds:** Implemented workarounds/notes for known core Foundry bugs (e.g., round duration expiry).
 
 ## Planned Features / To-Do
 
-- **Refine Condition Mechanics:**
-  - Implement specific Condition Actions (Break Free [Restrained/Pinned], Patch Up [Bleeding/Broken], Shake Off Stun [Stunned], Stand Up [Prone]).
-  - Implement Death Saving Throw mechanic (triggered by Incapacitated at 0 HP, potentially Deadly Poison).
-  - Implement spellcasting check for Mute condition once spellcasting exists.
-  - Explore automating more Immunities/Vulnerabilities (Flame Res, Flammable, Insulated, Broken) possibly via damage type system/resistance framework in actor data.
-  - Automate Shatter mechanic for Frozen.
-  - Automate "Damage on Hit" aspect of Bleeding (requires hooking into damage application).
-- **Spellcasting System:** Implement Items of type "spell", define how they are cast, integrate with Mute condition.
-- **Item Sheet Enhancements:** UI for editing array data (DR, Penalties), layouts for remaining item types.
-- **Combat Options & Actions:** Unarmed Strike, Grapple, Shove, Shield HP/Blocking, Dodge/Counter, Kevlar mechanics.
+- **Refine Condition Mechanics:** Implement specific Condition Actions (Break Free, Patch Up, Shake Off Stun, Stand Up); Implement Death Saving Throw mechanic.
+- **Refine Spellcasting System:** Implement Focus mechanic (concentration checks); Handle multi-turn casting times & action costs; Implement Area of Effect targeting/templates; Refine spell damage/healing application (e.g., centralized function considering resistances/vulnerabilities like Bleed/Broken); Implement Mending school healing interaction with Unconscious.
+- **Item Sheet Enhancements:** UI for editing array data (DR, Penalties); Layouts for remaining item types (Gear, Tool, Medicine, Antidotes, Brace, etc.).
+- **Combat Options:** Unarmed Strike, Grapple, Shove, Shield HP/Blocking, Dodge/Counter, Kevlar mechanics.
 - **NPC Sheet:** Design data model and sheet.
-- **Compendia:** Packs for base items (weapons, armor, gear, remedies like Antidotes/Brace), species, traits, example actors/NPCs.
-- **Character Creation:** Automate initial calculations (HP roll), Species/Trait application.
-- **Styling & Polish:** Continue refining CSS and overall sheet usability.
-- **Advanced Automation & Refactoring:** Explore auto-applying damage to targets, tracking action usage. Remove debug logging. Refine hook usage.
+- **Compendia:** Packs for base items (weapons, armor, gear, remedies), spells, species, traits, actors/NPCs.
+- **Character Creation:** Automate starting calculations.
+- **Styling & Polish:** Continue refining CSS and usability.
+- **Code Refinement:** Remove debug logging; Centralize damage/healing application.
 
 ## Feedback & Issues
 

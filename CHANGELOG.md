@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.8.0] - 2025-05-05
+
+### ✨ Features
+
+- Implemented basic Spellcasting framework:
+  - Added "spell" Item type with detailed data model in `template.json` (School, Casting Time, Range, Target, Duration, Focus, Defender Attribute, Damage, Healing, Applies Condition, etc.).
+  - Updated Item Sheet (`item-sheet.hbs`) to display and allow editing of all defined spell data fields, including dropdowns for School and Defender Attribute.
+  - Added "Spellbook" tab to Actor Sheet (`actor-sheet.hbs`) to list spell items separately from inventory.
+  - Added "Cast" button (<i class="fas fa-magic"></i>) to spell items listed in the Spellbook tab.
+  - Implemented spellcasting activation logic (`_onItemCast` in `SurgeCharacterSheet`):
+    - Checks for Mute condition.
+    - Handles basic targeting (`game.user.targets` or self).
+    - Initiates contested roll against targets.
+    - Applies effects (Damage, Healing, Conditions) via new `_applySpellEffects` helper method upon successful contest.
+  - Implemented contested spellcasting roll (`_performContestedSpellRoll` helper) using SURGE! rules (`Xd6x6+Mod+IntLevel` vs. Defender), posting results to chat.
+
+### 🐛 Bug Fixes
+
+- Resolved Item Sheet rendering errors for newly created spell items by correcting `template.json` structure/inheritance issues and Handlebars variable access (`systemData.*` vs direct properties).
+- Fixed chat message formatting issue (vertical text) for spell contest results (`.dice-total` CSS).
+- Fixed `Roll#evaluate` deprecation error within spell damage application.
+- Fixed condition data lookup (`CONFIG.SURGE.effectData`) failure during spell effect application.
+
+### 🔧 Maintenance
+
+- Made Active Effect data constants globally accessible via `CONFIG.SURGE.effectData` registry in `init` hook.
+- Refactored actor sheet event listeners (`activateListeners`) to target controls within specific tabs (Inventory vs. Spellbook).
+- Added default damage type "Physical" to `_performDamageRoll` signature.
+
 ## [0.7.1] - 2025-05-05
 
 ### ✨ Features
