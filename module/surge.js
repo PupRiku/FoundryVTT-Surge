@@ -9,6 +9,24 @@ Hooks.once('init', () => {
   };
   console.log('SURGE! | CONFIG.SURGE initialized.');
 
+  CONFIG.SURGE.spellSchools = {
+    '': '-- None --',
+    antithesis: 'Antithesis',
+    astral: 'Astral Magic',
+    disease: 'Disease',
+    earth: 'Earth',
+    fire: 'Fire',
+    ice: 'Ice',
+    light: 'Light',
+    mending: 'Mending',
+    shadow: 'Shadow',
+    third_eye: 'The Third Eye',
+    warding: 'Warding',
+    water: 'Water',
+    wind: 'Wind',
+  };
+  console.log('SURGE! | Spell Schools defined in CONFIG.SURGE.spellSchools');
+
   console.log('SURGE! | Registering effect data constants...');
   // Ensure the variables like bleedingEffectData are defined/accessible here
   CONFIG.SURGE.effectData['bleeding'] = bleedingEffectData;

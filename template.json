@@ -79,6 +79,7 @@
       "tool",
       "treasure",
       "species",
+      "spell",
       "trait"
     ],
     "item": {
@@ -217,11 +218,84 @@
       "baseMenace": 0,
       "traitOptions": []
     },
+    "spell": {
+      "description": "",
+      "quantity": 1,
+      "weight": 0,
+      "price": 0,
+      "school": {
+        "type": "String",
+        "label": "Spell School",
+        "value": ""
+      },
+      "castingTime": {
+        "type": "Number",
+        "label": "Casting Time (Actions)",
+        "value": 1
+      },
+      "range": {
+        "type": "String",
+        "label": "Range",
+        "value": ""
+      },
+      "target": {
+        "type": "String",
+        "label": "Target / Area",
+        "value": ""
+      },
+      "duration": {
+        "type": "String",
+        "label": "Duration",
+        "value": ""
+      },
+      "requiresFocus": {
+        "type": "Boolean",
+        "label": "Requires Focus?",
+        "value": false
+      },
+      "defenderAttribute": {
+        "type": "String",
+        "label": "Defender Attribute",
+        "value": "mystic"
+      },
+      "damage": {
+        "formula": {
+          "type": "String",
+          "label": "Damage Formula",
+          "value": ""
+        },
+        "type": { "type": "String", "label": "Damage Type", "value": "" }
+      },
+      "healing": {
+        "formula": {
+          "type": "String",
+          "label": "Healing Formula",
+          "value": ""
+        }
+      },
+      "appliesCondition": {
+        "type": "String",
+        "label": "Applies Condition ID(s)",
+        "value": ""
+      }
+    },
     "trait": {
       "description": "",
       "skillBonus": {
         "skill": "",
         "value": 0
+      }
+    },
+    "templates": {
+      "base": {
+        "description": {
+          "type": "String",
+          "label": "Description",
+          "value": ""
+        },
+        "quantity": { "type": "Number", "label": "Quantity", "value": 1 },
+        "weight": { "type": "Number", "label": "Weight", "value": 0 },
+        "price": { "type": "Number", "label": "Price (Gold)", "value": 0 }
       }
     }
   }

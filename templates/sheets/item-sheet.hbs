@@ -380,6 +380,146 @@
         </div>
       {{/if}}
       {{! End Shield Fields }}
+
+      {{! ***** SPELL FIELDS ***** }}
+      {{#if (eq item.type 'spell')}}
+        <div class='spell-details item-details-section'>
+          <h3>Spell Details</h3>
+
+          {{! Row 1: School, Casting Time, Range }}
+          <div class='grid grid-3col'>
+            <div class='form-group'>
+              <label>Spell School</label>
+              <select name='system.school.value'>
+                {{selectOptions
+                  spellSchools
+                  selected=systemData.school.value
+                  localize=false
+                }}
+              </select>
+            </div>
+            <div class='form-group'>
+              <label>Casting Time (Actions)</label>
+              <input
+                type='number'
+                name='system.castingTime.value'
+                value='{{systemData.castingTime.value}}'
+                data-dtype='Number'
+                min='0'
+                step='1'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Range</label>
+              <input
+                type='text'
+                name='system.range.value'
+                value='{{systemData.range.value}}'
+                placeholder='e.g., Self, 60 ft'
+              />
+            </div>
+          </div>
+
+          {{! Row 2: Target, Duration, Focus }}
+          <div class='grid grid-3col'>
+            <div class='form-group'>
+              <label>Target / Area</label>
+              <input
+                type='text'
+                name='system.target.value'
+                value='{{systemData.target.value}}'
+                placeholder='e.g., 1 creature, 15 ft cone'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Duration</label>
+              <input
+                type='text'
+                name='system.duration.value'
+                value='{{systemData.duration.value}}'
+                placeholder='e.g., Instant, 1 minute, Focus'
+              />
+            </div>
+            <div
+              class='form-group flexrow'
+              style='align-items: center; gap: 5px;'
+            >
+              {{! Use flexrow for checkbox alignment }}
+              <label style='flex: none;'>Requires Focus?</label>
+              <input
+                type='checkbox'
+                name='system.requiresFocus.value'
+                {{checked systemData.requiresFocus.value}}
+                style='flex: 0 0 auto;'
+              />
+            </div>
+          </div>
+
+          {{! Row 3: Defender Attribute }}
+          <div class='form-group'>
+            <label>Defender Attribute Roll</label>
+            <select name='system.defenderAttribute.value'>
+              {{selectOptions
+                defenderAttributes
+                selected=systemData.defenderAttribute.value
+                localize=false
+              }}
+            </select>
+            <small>(Defender uses this Attribute + their INT Level for contested
+              rolls, unless spell description specifies otherwise. Default uses
+              Mystic + INT Level.)</small>
+          </div>
+
+          <hr />
+          {{! Separator before Damage/Healing/Conditions }}
+
+          {{! Row 4: Damage / Healing }}
+          <div class='grid grid-2col'>
+            <div class='form-group'>
+              <label>Damage Formula</label>
+              <input
+                type='text'
+                name='system.damage.formula.value'
+                value='{{systemData.damage.formula.value}}'
+                placeholder='e.g., 3d6'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Damage Type</label>
+              <input
+                type='text'
+                name='system.damage.type.value'
+                value='{{systemData.damage.type.value}}'
+                placeholder='e.g., Fire, Physical'
+              />
+            </div>
+          </div>
+          <div class='form-group'>
+            <label>Healing Formula</label>
+            <input
+              type='text'
+              name='system.healing.formula.value'
+              value='{{systemData.healing.formula.value}}'
+              placeholder='e.g., 2d6+4'
+            />
+          </div>
+
+          {{! Row 5: Conditions }}
+          <div class='form-group'>
+            <label>Applies Condition ID(s)</label>
+            <input
+              type='text'
+              name='system.appliesCondition.value'
+              value='{{systemData.appliesCondition.value}}'
+              placeholder='e.g., burning, chilled'
+              title='Enter condition IDs separated by commas (if any).'
+            />
+            <small>
+              (Comma-separated, e.g., "surge-burning, chilled". Leave blank if
+              none.)</small>
+          </div>
+        </div>
+      {{/if}}
     </div>
     {{! End item-sheet-content }}
   </section>

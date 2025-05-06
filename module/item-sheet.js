@@ -43,39 +43,72 @@ export class SurgeItemSheet extends ItemSheet {
    * @override
    */
   async getData(options) {
-    // Get base data from the parent ItemSheet class
-    const context = await super.getData(options);
+    console.log(
+      `SURGE DEBUG | ItemSheet getData START for ${this.item?.name} (Type: ${this.item?.type})`
+    ); // Log Start
 
-    // Add the item's system data for easy access in the template
-    // context.item is the Item document, context.item.system is your data
-    context.systemData = context.item.system;
+    try {
+      const context = await super.getData(options);
+      console.log(`SURGE DEBUG | ItemSheet super.getData completed.`);
 
-    // Define choices for the dropdowns
-    context.weaponTypes = {
-      '': ' - Select - ', // Add a blank default
-      melee: 'Melee',
-      ranged: 'Ranged',
-    };
-    context.weaponSkills = {
-      '': ' - Select - ', // Add a blank default
-      martial: 'Martial Combat',
-      marksmanship: 'Marksmanship',
-      mystic: 'Mystic', // Added Mystic as an option based on earlier rules
-      // Add any other relevant skills here
-    };
-    context.armorTypes = {
-      '': '- Select -', // Blank default
-      light: 'Light',
-      medium: 'Medium',
-      heavy: 'Heavy',
-      // Add "vest" or other specific types if defined in template.json
-    };
+      // Add system data only if item and system exist
+      context.systemData = context.item.system;
+      console.log(`SURGE DEBUG | ItemSheet systemData assigned.`);
 
-    // We can add more data preparation here later if needed (e.g., config lookups)
-    // context.config = CONFIG.SURGE;
+      // Define choices for dropdowns
+      context.weaponTypes = {
+        '': ' - Select - ', // Add a blank default
+        melee: 'Melee',
+        ranged: 'Ranged',
+      };
+      context.weaponSkills = {
+        '': ' - Select - ', // Add a blank default
+        martial: 'Martial Combat',
+        marksmanship: 'Marksmanship',
+        mystic: 'Mystic', // Added Mystic as an option based on earlier rules
+        // Add any other relevant skills here
+      };
+      context.armorTypes = {
+        '': '- Select -', // Blank default
+        light: 'Light',
+        medium: 'Medium',
+        heavy: 'Heavy',
+        // Add "vest" or other specific types if defined in template.json
+      };
 
-    console.log(`SURGE! | Item Sheet Context (${context.item.name}):`, context); // Log for debugging
-    return context;
+      // Access config data safely
+      console.log(
+        `SURGE DEBUG | Accessing CONFIG.SURGE.spellSchools:`,
+        CONFIG.SURGE?.spellSchools
+      );
+      context.spellSchools = CONFIG.SURGE?.spellSchools || {};
+
+      console.log(
+        `SURGE DEBUG | Accessing CONFIG.SURGE for defenderAttributes...`
+      ); // Assuming CONFIG.SURGE exists from init hook
+      context.defenderAttributes = {
+        mystic: 'Mystic + INT (Default)',
+        str: 'Strength',
+        dex: 'Dexterity',
+        int: 'Intelligence',
+        cha: 'Charisma',
+      };
+      console.log(`SURGE DEBUG | ItemSheet dropdown choices prepared.`);
+
+      // Log just before returning
+      console.log(
+        `SURGE DEBUG | ItemSheet getData END for ${this.item?.name}. Returning context.`
+      );
+      return context;
+    } catch (err) {
+      console.error(
+        `SURGE ERROR | Error occurred within ItemSheet getData for ${this.item?.name}:`,
+        err
+      );
+      // Return a minimal context to potentially prevent further errors down the line
+      // Although the sheet might still fail to render fully
+      return { item: this.item, systemData: this.item?.system ?? {} };
+    }
   }
 
   /**
@@ -115,6 +148,7 @@ Items.registerSheet(
       'tool',
       'treasure',
       'plate',
+      'spell',
     ],
     makeDefault: true, // Make this the default sheet for these types
     label: 'SURGE! - Item Sheet', // Label shown in sheet configuration dialog
