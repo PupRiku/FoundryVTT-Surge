@@ -56,6 +56,27 @@ Hooks.once('init', () => {
   CONFIG.SURGE.effectData['stunned'] = stunnedEffectData;
   CONFIG.SURGE.effectData['unconscious'] = unconsciousEffectData;
   CONFIG.SURGE.effectData['wet'] = wetEffectData;
+  CONFIG.SURGE.effectData['death-saves-conscious'] =
+    deathSavesConsciousEffectData;
+  CONFIG.SURGE.effectData['death-saves-unconscious'] =
+    deathSavesUnconsciousEffectData;
+
+  CONFIG.SURGE.DRValueMap = {
+    // Map DR Level (0-4) to Target Number
+    0: 5, // Easy
+    1: 10, // Moderate
+    2: 15, // Difficult
+    3: 35, // Extremely Difficult
+    4: 50, // Legendary (Max DR for saves, or map higher if needed)
+  };
+  CONFIG.SURGE.DRLabelMap = {
+    // Map DR Level to Label
+    0: 'Easy (Target 5)',
+    1: 'Moderate (Target 10)',
+    2: 'Difficult (Target 15)',
+    3: 'Extremely Difficult (Target 35)',
+    4: 'Legendary (Target 50)',
+  };
 
   console.log('SURGE! | Effect data constants registered.');
 
@@ -262,6 +283,14 @@ const SURGE_STATUS_EFFECTS = [
     id: 'broken', // System-unique ID
     label: 'Broken',
     icon: 'systems/surge/assets/icons/conditions/broken.svg', // MAKE SURE YOU HAVE AN ICON
+  },
+  {
+    _id: 'WletQUbE7uRu4X43', // Generate a new unique ID for this entry
+    id: 'dead', // The CORE Foundry ID for the 'defeated' status
+    label: 'EFFECT.StatusDead', // Uses Foundry's built-in localization for "Dead"
+    icon: 'icons/svg/skull.svg', // The standard Foundry skull icon
+    // No 'changes' or 'flags' needed here as it's mostly a visual marker
+    // managed by core Foundry when toggled via actor.toggleStatusEffect
   },
 ];
 
@@ -923,6 +952,66 @@ const brokenEffectData = {
   flags: { surge: {} },
 };
 
+// --- Active Effect Data for Death Saves (Conscious) ---
+const deathSavesConsciousEffectData = {
+  name: 'Dying (Conscious)',
+  img: 'icons/svg/hazard.svg',
+  duration: { seconds: null, rounds: null, turns: null },
+  disabled: false,
+  changes: [
+    // Only actor modifications that AREN'T just state for the effect itself
+    {
+      key: 'system.passives.movement.value',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: '0',
+      priority: 50,
+    },
+    // No longer setting actor.flags.surge.deathSavesStage via changes here,
+    // as the effect itself will carry this info in its own flags.
+  ],
+  description:
+    '<p>Semi-conscious, aware, but unable to move, take actions, or speak.</p><p>Must make a STR or Survival check against escalating DR at the start of each turn (via Death Save button).</p><p>Failure transitions to Unconscious Death Saves.</p>',
+  flags: {
+    // Store stage and DR level directly on the effect
+    surge: {
+      deathSavesStage: 'conscious',
+      deathSaveDRLevel: 0, // Starts at Easy (level 0)
+    },
+  },
+};
+
+// --- Active Effect Data for Death Saves (Unconscious) ---
+const deathSavesUnconsciousEffectData = {
+  name: 'Dying (Unconscious)',
+  img: 'icons/svg/unconscious.svg',
+  duration: { seconds: null, rounds: null, turns: null },
+  disabled: false,
+  changes: [
+    {
+      key: 'system.passives.movement.value',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: '0',
+      priority: 50,
+    },
+    {
+      // This flag on actor might still be useful for broader checks of being unconscious
+      key: 'flags.surge.isTrulyUnconscious',
+      mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+      value: 'true',
+      priority: 65,
+    },
+  ],
+  description:
+    '<p>Unconscious and dying. Unable to move, take actions, or speak.</p><p>Must make a STR or Survival check against escalating DR at the start of each turn (via Death Save button).</p><p>First failure results in permanent death.</p>',
+  flags: {
+    // Store stage and DR level directly on the effect
+    surge: {
+      deathSavesStage: 'unconscious',
+      deathSaveDRLevel: 0, // Resets to Easy (level 0)
+    },
+  },
+};
+
 console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loading
 
 /**
@@ -1188,8 +1277,69 @@ export class SurgeCharacterSheet extends ActorSheet {
     context.systemData.passives.menace.tooltip = `Base: ${baseMenace} + Equip: ${equipmentMenace} = Total: ${totalMenace}`;
     // --- End of Menace Calculation ---
 
-    // console.log('SURGE! | Character Sheet Data Context:', context);
+    // --- Calculate HP Status Label & Death Save Button State ---
+    let hpStatusLabel = 'Healthy';
+    let deathSaveButtonDisabled = true;
+    const currentHp = context.systemData.passives.hp.value;
+    const maxHp = context.systemData.passives.hp.max;
 
+    // Check for core "dead" status first (skull icon)
+    const defeatedStatusId = CONFIG.Combat.defeatedStatusId ?? 'dead'; // Get the system's ID for "defeated"
+    const isActuallyDead = this.actor.statuses.has(defeatedStatusId);
+
+    // Read the deathSavesStage flag directly from the actor's flags
+    // This flag is set by the "Dying (Conscious)" or "Dying (Unconscious)" Active Effects
+    const deathSaveEffect = this.actor.effects.find(
+      (e) => e.flags?.surge?.deathSavesStage && !e.disabled
+    );
+    const actorDeathSaveStage = deathSaveEffect?.flags?.surge?.deathSavesStage;
+
+    console.log(
+      `SURGE DEBUG (getData) | Found deathSaveEffect:`,
+      deathSaveEffect
+    );
+    console.log(
+      `SURGE DEBUG (getData) | actorDeathSaveStage from effect.flags: ${actorDeathSaveStage}`
+    );
+
+    if (isActuallyDead) {
+      hpStatusLabel = 'Dead';
+      deathSaveButtonDisabled = true;
+    } else if (actorDeathSaveStage === 'conscious') {
+      // <<< Check actor's flag
+      hpStatusLabel = 'Dying - Conscious';
+      deathSaveButtonDisabled = false;
+    } else if (actorDeathSaveStage === 'unconscious') {
+      // <<< Check actor's flag
+      hpStatusLabel = 'Dying - Unconscious';
+      deathSaveButtonDisabled = false;
+    } else if (currentHp <= 0) {
+      // This fallback should ideally not be hit if the hook applies the effect correctly.
+      // It indicates the "Death Saves (Conscious)" effect/flag wasn't yet present when getData ran.
+      hpStatusLabel = 'Dying (Awaiting State)'; // Changed label for clarity
+      deathSaveButtonDisabled = false; // Still enable button if HP is 0
+      console.warn(
+        `SURGE WARN (getData) | HP is <= 0 but no deathSavesStage flag found on actor. Defaulting to Dying.`
+      );
+    } else if (maxHp > 0 && currentHp <= maxHp / 2) {
+      hpStatusLabel = 'Bloodied';
+      deathSaveButtonDisabled = true;
+    } else if (maxHp > 0 && currentHp > maxHp / 2) {
+      hpStatusLabel = 'Healthy';
+      deathSaveButtonDisabled = true;
+    } else {
+      hpStatusLabel = 'Status Unknown';
+      deathSaveButtonDisabled = true;
+    }
+
+    context.hpStatusLabel = hpStatusLabel;
+    context.deathSaveButtonDisabled = deathSaveButtonDisabled;
+    console.log(
+      `SURGE DEBUG (getData) | Final HP Status: ${hpStatusLabel}, Death Save Button Disabled: ${deathSaveButtonDisabled}`
+    );
+    // --- END NEW ---
+
+    console.log('SURGE! | Character Sheet Data Context:', context);
     return context;
   }
 
@@ -1203,6 +1353,9 @@ export class SurgeCharacterSheet extends ActorSheet {
     // Call the parent class's activateListeners method
     super.activateListeners(html);
     // console.log('SURGE! | Activating Listeners');
+
+    // --- Header Listeners ---
+    html.find('.death-save-button').click(this._onMakeDeathSave.bind(this));
 
     // --- Roll Listeners ---
     html
@@ -1251,6 +1404,166 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
+
+  /**
+   * Handle the click on the "Make Death Save" button.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onMakeDeathSave(event) {
+    event.preventDefault();
+    const actor = this.actor;
+    console.log(`SURGE | _onMakeDeathSave triggered for ${actor.name}`);
+
+    // Find the current death save effect to get stage and DR level
+    const deathSaveEffect = actor.effects.find(
+      (e) => e.flags?.surge?.deathSavesStage && !e.disabled
+    );
+
+    if (!deathSaveEffect) {
+      ui.notifications.warn(
+        `${actor.name} is not currently in a death saving throw state.`
+      );
+      console.log(
+        `SURGE | No active death save effect found for ${actor.name}.`
+      );
+      return;
+    }
+
+    const stage = deathSaveEffect.flags.surge.deathSavesStage;
+    let drLevel = Number(deathSaveEffect.flags.surge.deathSaveDRLevel ?? 0);
+    const drValue =
+      CONFIG.SURGE.DRValueMap[drLevel] ?? CONFIG.SURGE.DRValueMap[0];
+    const drLabel =
+      CONFIG.SURGE.DRLabelMap[drLevel] ?? CONFIG.SURGE.DRLabelMap[0];
+
+    console.log(
+      `SURGE | Current Death Save Stage: ${stage}, DR Level: ${drLevel} (Target: ${drValue} - ${drLabel})`
+    );
+
+    // --- Prompt for Stat Choice (Strength or Survival) ---
+    const choice = await new Promise((resolve) => {
+      new Dialog({
+        title: 'Make Death Save',
+        content: `
+                <p>${actor.name} is ${
+          stage === 'conscious' ? 'consciously' : 'unconsciously'
+        } dying.</p>
+                <p>Choose roll for Death Save (vs DR ${drValue} - ${drLabel}):</p>
+                <div class="form-group">
+                    <label for="deathSaveStatChoice">Roll Using:</label>
+                    <select id="deathSaveStatChoice" name="deathSaveStatChoice">
+                        <option value="str">Strength</option>
+                        <option value="survival">Survival</option>
+                    </select>
+                </div>`,
+        buttons: {
+          roll: {
+            icon: '<i class="fas fa-dice-d20"></i>',
+            label: 'Roll Save',
+            callback: (html) =>
+              resolve(html.find('select[name="deathSaveStatChoice"]').val()),
+          },
+          cancel: {
+            icon: '<i class="fas fa-times"></i>',
+            label: 'Cancel',
+            callback: () => resolve(null),
+          },
+        },
+        default: 'roll',
+        close: () => resolve(null), // Resolve null if closed
+      }).render(true);
+    });
+
+    if (!choice) {
+      console.log(`SURGE | Death Save cancelled.`);
+      return;
+    }
+    console.log(`SURGE | User chose to roll: ${choice}`);
+
+    // --- Perform the Roll ---
+    let baseLevel = 1;
+    let rollStatLabel = '';
+    if (choice === 'str') {
+      baseLevel = actor.system.attributes.str?.value ?? 1;
+      rollStatLabel = 'Strength';
+    } else {
+      // survival
+      baseLevel = actor.system.skills.survival?.value ?? 1; // Assuming 'survival' is skill key
+      rollStatLabel = 'Survival';
+    }
+
+    const rollTableEntry = this._rollTable[baseLevel];
+    const dice = rollTableEntry?.dice ?? 1;
+    const mod = rollTableEntry?.mod ?? 0;
+    const rollFormula = `${dice}d6x6 + ${mod}`;
+    console.log(
+      `SURGE | Death Save Formula for ${rollStatLabel}: ${rollFormula} (Level ${baseLevel})`
+    );
+
+    const saveRoll = await new Roll(rollFormula).evaluate();
+    console.log(
+      `SURGE | Death Save (${rollStatLabel}) Rolled: ${saveRoll.total}`
+    );
+
+    // Send roll to chat (adjust visibility as per clarification)
+    saveRoll.toMessage({
+      speaker: ChatMessage.getSpeaker({ actor: actor }),
+      flavor: `${rollStatLabel} vs DR ${drValue} (${drLabel})`,
+    });
+
+    const success = saveRoll.total >= drValue;
+    console.log(
+      `SURGE | Save Success: ${success} (Rolled ${saveRoll.total} vs DR ${drValue})`
+    );
+
+    // --- Process Result ---
+    let chatOutcome = '';
+    if (success) {
+      drLevel++;
+      await deathSaveEffect.update({ 'flags.surge.deathSaveDRLevel': drLevel });
+      const nextDRKey = Math.min(
+        drLevel,
+        Object.keys(CONFIG.SURGE.DRLabelMap).length - 1
+      ); // Cap at max defined DR
+      const nextDRLabel = CONFIG.SURGE.DRLabelMap[nextDRKey] ?? 'Max';
+      chatOutcome = `${actor.name} succeeds on their Death Save! They hold on. Next save DR will be: ${nextDRLabel}.`;
+      console.log(
+        `SURGE | Death Save Success. DRLevel for ${stage} updated to ${drLevel}.`
+      );
+    } else {
+      // Failure
+      if (stage === 'conscious') {
+        chatOutcome = `${actor.name} fails their Conscious Death Save and slips into Unconscious Death Saving Throws! DR resets to Easy.`;
+        console.log(
+          `SURGE | Conscious Death Save Failed. Transitioning to Unconscious.`
+        );
+        await deathSaveEffect.delete();
+        const unconsciousData = foundry.utils.deepClone(
+          CONFIG.SURGE.effectData['death-saves-unconscious']
+        );
+        unconsciousData.flags.surge.deathSaveDRLevel = 0; // Ensure DR resets to 0 (Easy)
+        await ActiveEffect.create(unconsciousData, { parent: actor });
+      } else {
+        // stage === "unconscious"
+        chatOutcome = `${actor.name} fails their Unconscious Death Save and has died.`;
+        console.log(`SURGE | Unconscious Death Save Failed. Actor dies.`);
+        const defeatedStatusId = CONFIG.Combat.defeatedStatusId ?? 'dead';
+        await actor.toggleStatusEffect(defeatedStatusId, {
+          active: true,
+          overlay: true,
+        });
+        await deathSaveEffect.delete();
+      }
+    }
+
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: actor }),
+      content: chatOutcome,
+    });
+
+    // Sheet re-render should be triggered by AE changes or actor updates
+  } // End _onMakeDeathSave
 
   /**
    * Handle clicking on an attribute label/block to roll it.
@@ -2726,94 +3039,202 @@ export class SurgeCharacterSheet extends ActorSheet {
 } // End of SurgeCharacterSheet class
 
 /**
- * Handle Actor updates AFTER they occur to remove Stunned if HP decreased.
- * Uses HP stored on the effect flag from when it was applied/last checked.
+ * Handle Actor updates AFTER they occur.
+ * - Removes Stunned if HP decreased.
+ * - Manages "Death Saves (Conscious/Unconscious)" states based on HP changes.
  * @param {Actor} actorDocument The Actor document THAT WAS updated.
  * @param {object} change Object containing the changes made in this update.
- * @param {object} options Additional options which triggered this update.
+ * @param {object} options Additional options which trigger this update.
  * @param {string} userId The ID of the User triggering the update.
  */
 async function handleActorUpdate(actorDocument, change, options, userId) {
-  // Check if HP value actually changed in this specific update
-  const newHp = change?.system?.passives?.hp?.value;
-  if (typeof newHp !== 'number') {
-    // If HP wasn't part of *this specific change object*, exit.
-    // We need to check the effect regardless in case HP changed previously
-    // and we need to update the stored HP flag. Let's proceed.
-  }
+  if (!game.user.isGM) return;
 
-  // Find any active Stunned effect first
-  // Check flag set by 'changes', ensure not disabled
-  const stunnedEffect = actorDocument.effects.find(
-    (e) => e.changes.some((c) => c.key === 'flags.surge.stunned') && !e.disabled
-  );
-
-  // Only proceed if the actor currently HAS an active Stunned effect
-  if (!stunnedEffect) {
-    // Clean up potentially orphaned flag if needed? Not strictly necessary.
-    return;
-  }
-
+  const actorName = actorDocument.name;
   console.log(
-    `SURGE DEBUG (handleActorUpdate) | Actor ${actorDocument.name} is Stunned. Checking HP change.`
+    `SURGE DEBUG (handleActorUpdate) | Hook Fired for actor: ${actorName}. Change keys:`,
+    Object.keys(change ?? {})
   );
 
-  // Get the HP value stored LAST time we checked/applied the effect
-  const lastHp = stunnedEffect.flags?.surge?.stunnedLastHp;
-  // Get the CURRENT HP value after the update completed
-  const currentHp = actorDocument.system.passives.hp.value;
+  const currentHpAfterUpdate = actorDocument.system.passives.hp.value;
+  const hpWasChangedInThisUpdate =
+    change?.system?.passives?.hp?.value !== undefined;
 
-  console.log(
-    `SURGE DEBUG (handleActorUpdate) | Last Stored HP: ${lastHp}, Current HP: ${currentHp}`
-  );
+  // --- Handle Stunned Removal ---
+  const isStunnedFlagPresent = actorDocument.flags?.surge?.stunned === true;
+  const stunnedEffectFromActor = isStunnedFlagPresent
+    ? actorDocument.effects.find(
+        (e) =>
+          e.changes.some((c) => c.key === 'flags.surge.stunned') && !e.disabled
+      )
+    : null;
 
-  // Check if we have valid numbers and if HP decreased
-  if (
-    typeof lastHp === 'number' &&
-    typeof currentHp === 'number' &&
-    currentHp < lastHp
-  ) {
-    // --- HP DECREASED - Remove Stunned ---
-    console.log(
-      `SURGE | ${actorDocument.name} took damage while Stunned (HP ${lastHp} -> ${currentHp}). Removing Stunned effect.`
-    );
-    try {
-      await stunnedEffect.delete();
+  if (stunnedEffectFromActor && hpWasChangedInThisUpdate) {
+    const lastHpForStun = stunnedEffectFromActor.flags?.surge?.stunnedLastHp;
+    const newHpToCompareForStun = currentHpAfterUpdate; // Use the already updated HP
+
+    if (
+      typeof lastHpForStun === 'number' &&
+      typeof newHpToCompareForStun === 'number' &&
+      newHpToCompareForStun < lastHpForStun
+    ) {
       console.log(
-        `SURGE | Successfully removed Stunned effect from ${actorDocument.name}.`
+        `SURGE | ${actorName} took damage while Stunned (HP ${lastHpForStun} -> ${newHpToCompareForStun}). Removing Stunned effect.`
       );
-      ui.notifications.info(
-        `${actorDocument.name} is no longer Stunned after taking damage.`
-      );
-    } catch (err) {
-      console.error(
-        `SURGE | Failed to delete Stunned effect for ${actorDocument.name}:`,
-        err
-      );
+      try {
+        await stunnedEffectFromActor.delete();
+        ui.notifications.info(`${actorName} is no longer Stunned.`);
+      } catch (err) {
+        console.error(`SURGE | Failed to delete Stunned:`, err);
+      }
+    } else if (
+      typeof newHpToCompareForStun === 'number' &&
+      newHpToCompareForStun !== lastHpForStun
+    ) {
+      try {
+        await stunnedEffectFromActor.update({
+          'flags.surge.stunnedLastHp': newHpToCompareForStun,
+        });
+      } catch (err) {
+        console.error(`SURGE | Failed to update Stunned last HP:`, err);
+      }
     }
-    // --- End Removal ---
-  } else if (typeof currentHp === 'number' && currentHp !== lastHp) {
-    // --- HP CHANGED but DID NOT DECREASE (or lastHp was invalid) ---
-    // Update the stored HP on the effect to the new current value
-    // This handles healing or manual edits that didn't trigger removal
+  }
+  // --- End Stunned Removal ---
+
+  // --- Handle Death Save State Transitions ---
+  // Find if there's an *existing* death save effect on the actor (Conscious or Unconscious)
+  const defeatedStatusId = CONFIG.Combat.defeatedStatusId ?? 'dead';
+  let isCurrentlyMarkedDead = actorDocument.statuses.has(defeatedStatusId); // Actor has the 'dead' icon
+
+  const existingDeathSaveEffect = actorDocument.effects.find(
+    (e) => e.flags?.surge?.deathSavesStage && !e.disabled
+  );
+  const currentActorDeathSaveStage =
+    existingDeathSaveEffect?.flags.surge.deathSavesStage;
+
+  console.log(
+    `SURGE DEBUG (handleActorUpdate) | ${actorName} - HP: ${currentHpAfterUpdate}, IsMarkedDead: ${isCurrentlyMarkedDead}, CurrentDeathSaveStage: ${currentActorDeathSaveStage}, HP changed this update: ${hpWasChangedInThisUpdate}`
+  );
+
+  // SCENARIO 0: Actor was "Dead" but HP is now > 0 (Revival)
+  if (
+    isCurrentlyMarkedDead &&
+    hpWasChangedInThisUpdate &&
+    currentHpAfterUpdate > 0
+  ) {
     console.log(
-      `SURGE DEBUG (handleActorUpdate) | HP changed but did not decrease (or lastHp missing). Updating stored HP on Stunned effect to ${currentHp}.`
+      `SURGE | ${actorName} was Dead but now has ${currentHpAfterUpdate} HP. Reviving.`
     );
     try {
-      await stunnedEffect.update({ 'flags.surge.stunnedLastHp': currentHp });
-    } catch (err) {
-      console.error(
-        `SURGE | Failed to update stunnedLastHp flag for ${actorDocument.name}:`,
-        err
+      await actorDocument.toggleStatusEffect(defeatedStatusId, {
+        active: false,
+        overlay: true,
+      });
+      console.log(
+        `SURGE | Toggled '${defeatedStatusId}' status OFF for ${actorName}.`
       );
+      isCurrentlyMarkedDead = false; // Update our local check
+
+      // Clean up any lingering death save effects/flags
+      for (const effect of actorDocument.effects) {
+        if (
+          effect.flags?.surge?.deathSavesStage ||
+          effect.name === 'Dying (Conscious)' ||
+          effect.name === 'Dying (Unconscious)'
+        ) {
+          await effect.delete();
+        }
+      }
+      const flagsToUnset = {
+        'flags.surge.-=deathSavesStage': null,
+        'flags.surge.-=deathSaveDRLevel': null,
+        'flags.surge.-=isTrulyUnconscious': null,
+      };
+      await actorDocument.update(flagsToUnset);
+      console.log(`SURGE | Cleared death save flags for revived ${actorName}.`);
+
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: actorDocument }),
+        content: `${actorName} has been revived from death!`,
+      });
+    } catch (err) {
+      console.error(`SURGE | Failed to process revival for ${actorName}:`, err);
     }
-    // --- End Stored HP Update ---
-  } else {
-    console.log(
-      `SURGE DEBUG (handleActorUpdate) | HP did not change relevantly (${currentHp} vs ${lastHp}). Stunned persists.`
-    );
   }
-  console.log(`SURGE DEBUG (handleActorUpdate) | --- Hook Finished ---`);
+  if (!isCurrentlyMarkedDead) {
+    // SCENARIO 1: HP is now 0 or below, AND the actor is NOT currently in any death save stage.
+    if (
+      hpWasChangedInThisUpdate &&
+      currentHpAfterUpdate <= 0 &&
+      !currentActorDeathSaveStage
+    ) {
+      console.log(
+        `SURGE | ${actorName} HP at ${currentHpAfterUpdate}. Applying "Death Saves (Conscious)".`
+      );
+      try {
+        // Ensure no old death save effects are lingering if we are applying a new one
+        for (const effect of actorDocument.effects) {
+          if (effect.flags?.surge?.deathSavesStage) await effect.delete();
+        }
+        const flagsToUnsetIfPresent = {
+          'flags.surge.-=deathSavesStage': null,
+          'flags.surge.-=deathSaveDRLevel': null,
+          'flags.surge.-=isTrulyUnconscious': null,
+        };
+        await actorDocument.update(flagsToUnsetIfPresent); // Clear just in case
+
+        const effectData =
+          CONFIG.SURGE?.effectData?.['death-saves-conscious'] ??
+          deathSavesConsciousEffectData;
+        await ActiveEffect.create(effectData, { parent: actorDocument });
+
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: actorDocument }),
+          content: `${actorName} has fallen to 0 HP and is in Conscious Death Saving Throws!`,
+        });
+      } catch (err) {
+        console.error(
+          `SURGE | Failed to apply "Death Saves (Conscious)" to ${actorName}:`,
+          err
+        );
+      }
+
+      // SCENARIO 2: Actor *was* in a death save stage (indicated by existingDeathSaveEffect), and HP is now above 0 (healed).
+    } else if (
+      existingDeathSaveEffect &&
+      hpWasChangedInThisUpdate &&
+      currentHpAfterUpdate > 0
+    ) {
+      console.log(
+        `SURGE | ${actorName} was dying (Stage: ${currentActorDeathSaveStage}), now has ${currentHpAfterUpdate} HP. Removing death save state.`
+      );
+      try {
+        await existingDeathSaveEffect.delete();
+        const flagsToUnset = {
+          'flags.surge.-=deathSavesStage': null,
+          'flags.surge.-=deathSaveDRLevel': null,
+          'flags.surge.-=isTrulyUnconscious': null,
+        };
+        await actorDocument.update(flagsToUnset);
+
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: actorDocument }),
+          content: `${actorName} has been stabilized and is no longer dying!`,
+        });
+      } catch (err) {
+        console.error(
+          `SURGE | Failed to remove death save effects for ${actorName}:`,
+          err
+        );
+      }
+    }
+  }
+  // --- END Death Save State Transitions ---
+
+  console.log(
+    `SURGE DEBUG (handleActorUpdate) | --- Hook Finished for ${actorName} ---`
+  );
 }
 
 /**

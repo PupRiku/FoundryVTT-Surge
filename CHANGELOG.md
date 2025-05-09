@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.9.0] - 2025-05-09
+
+### ✨ Features
+
+- Implemented Death Saving Throw system:
+  - Automatic transition to "Dying (Conscious)" state when HP drops to 0 (via `updateActor` hook), applying "Dying (Conscious)" Active Effect (sets movement to 0, stores DR level).
+  - Added HP-based status label ("Healthy", "Bloodied", "Dying - Conscious", "Dying - Unconscious", "Dead") to Actor Sheet header.
+  - Added "Make Death Save" button to Actor Sheet header, enabled when actor is in a death save state.
+  - Implemented Death Save logic (`_onMakeDeathSave`): Prompts for STR/Survival, rolls against escalating DR (Easy DR starts at 5, increases; DR resets on stage transition from Conscious to Unconscious), handles success/failure for both Conscious and Unconscious stages.
+  - Failure in Unconscious stage results in applying the core "Dead" status (skull icon).
+  - Healing an actor with >0 HP who was "Dead" or in a death save state now correctly removes these states and updates the UI label/button.
+
+### 🐛 Bug Fixes
+
+- Resolved `ReferenceError: currentActorDeathSaveStageReadFromActorFlags is not defined` in `handleActorUpdate` hook.
+- Corrected logic in `ActorSheet.getData` for `hpStatusLabel` to reliably detect and display "Dead" and "Dying - Conscious/Unconscious" states by checking effect flags.
+- Fixed issue where "Dead" status was not applied correctly due to missing "dead" ID in custom `CONFIG.statusEffects`.
+- Fixed issue where "Dead" status was not removed upon revival (HP > 0).
+
+### 🔧 Maintenance
+
+- Created "Dying (Conscious)" and "Dying (Unconscious)" Active Effect data definitions, storing stage and DR level directly on effect flags.
+- Added Difficulty Rating (DR) level-to-value mapping to `CONFIG.SURGE` for Death Saves.
+- Updated `handleActorUpdate` hook to manage entry into, transition between, and exit from death save states based on HP changes.
+- Added "dead" status definition to `SURGE_STATUS_EFFECTS` to integrate with Foundry's core defeated status display.
+
 ## [0.8.0] - 2025-05-05
 
 ### ✨ Features

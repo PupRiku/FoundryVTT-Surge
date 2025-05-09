@@ -12,20 +12,20 @@ This system is currently **under active development** (pre-release) but now incl
 
 ## Installation
 
-**Important:** This system is currently in a pre-release state (v0.8.0). Features may be incomplete or change. Use with caution!
+**Important:** This system is currently in a pre-release state (v0.9.0). Features may be incomplete or change. Use with caution!
 
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field at the bottom, paste the following URL for the **v0.8.0** release:
+4.  In the "Manifest URL" field at the bottom, paste the following URL for the **v0.9.0** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.8.0/system.json
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.9.0/system.json
     ```
 5.  Click "Install".
 
 Foundry will download and install the system. You can then create a new world using the SURGE! system.
 
-## Current Features (as of v0.8.0)
+## Current Features (as of v0.9.0)
 
 - **Basic System Structure:** `system.json` manifest, `template.json` data models (Character, various Item types). Basic CSS styling. Includes Macro Compendium pack.
 - **Character Sheet:**
@@ -48,6 +48,10 @@ Foundry will download and install the system. You can then create a new world us
   - Defense rolls (Melee, Ranged, Magic) triggerable via Ctrl+Click.
   - Rolls incorporate applicable bonuses/penalties from stats and equipped items.
   - Contested rolls for spellcasting.
+- **Death Saving Throw System:**
+  - Characters dropping to 0 HP automatically enter a two-stage (Conscious, then Unconscious) death save process with escalating DR.
+  - Includes UI elements on actor sheet header (status label, save button).
+  - Healing from 0 HP or "Dead" state correctly removes dying/dead states.
 - **Status Effects & Conditions:**
   - Dynamic registration of system-specific status effect icons, replacing core defaults.
   - Implementation of numerous conditions with automated mechanics where practical:
@@ -70,7 +74,7 @@ Foundry will download and install the system. You can then create a new world us
 
 ## Planned Features / To-Do
 
-- **Refine Condition Mechanics:** Implement specific Condition Actions (Break Free, Patch Up, Shake Off Stun, Stand Up); Implement Death Saving Throw mechanic.
+- **Refine Condition Mechanics:** Implement specific Condition Actions (Break Free, Patch Up, Shake Off Stun, Stand Up)
 - **Refine Spellcasting System:** Implement Focus mechanic (concentration checks); Handle multi-turn casting times & action costs; Implement Area of Effect targeting/templates; Refine spell damage/healing application (e.g., centralized function considering resistances/vulnerabilities like Bleed/Broken); Implement Mending school healing interaction with Unconscious.
 - **Item Sheet Enhancements:** UI for editing array data (DR, Penalties); Layouts for remaining item types (Gear, Tool, Medicine, Antidotes, Brace, etc.).
 - **Combat Options:** Unarmed Strike, Grapple, Shove, Shield HP/Blocking, Dodge/Counter, Kevlar mechanics.

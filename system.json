@@ -2,7 +2,7 @@
   "id": "surge",
   "title": "SURGE!",
   "description": "A system for the SURGE! TTRPG, focusing on exciting dice mechanics and unique species.",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "compatibility": {
     "minimum": "12",
     "verified": "12.331",
@@ -19,7 +19,7 @@
   "styles": ["css/surge.css"],
   "url": "https://github.com/PupRiku/FoundryVTT-Surge",
   "manifest": "https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/main/system.json",
-  "download": "https://github.com/PupRiku/FoundryVTT-Surge/archive/refs/tags/v0.8.0.zip",
+  "download": "https://github.com/PupRiku/FoundryVTT-Surge/archive/refs/tags/v0.9.0.zip",
   "license": "LICENSE",
   "readme": "https://github.com/PupRiku/FoundryVTT-Surge/blob/main/README.md",
   "bugs": "https://github.com/PupRiku/FoundryVTT-Surge/issues",

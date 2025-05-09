@@ -35,6 +35,17 @@
     </div>
     {{! End header-top-row }}
 
+    {{! ***** STATUS & DEATH SAVE ROW ***** }}
+    <div class="header-status-row flexrow" style="align-items: center; justify-content: space-around; margin-bottom: 10px; padding: 5px; background: rgba(0,0,0,0.05);">
+        <div class="hp-status-label">
+            <strong>Status:</strong> {{hpStatusLabel}}
+        </div>
+        <button type="button" class="death-save-button" {{#if deathSaveButtonDisabled}}disabled{{/if}}>
+            Make Death Save
+        </button>
+    </div>
+    {{! ***** STATUS & DEATH SAVE ROW ***** }}
+
     {{! Passives Grid (Placed below top row) }}
     <div class='header-passives-grid'>
       {{! Row 1 }}

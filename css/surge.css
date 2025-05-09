@@ -808,3 +808,22 @@
   white-space: normal;
   word-break: normal;
 }
+
+.surge .sheet-header .header-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Or space-around, center */
+  padding: 5px 10px;
+  background-color: #f0f0f0; /* Light background for the row */
+  border-radius: 3px;
+  margin-bottom: 8px;
+}
+
+.surge .sheet-header .hp-status-label {
+  font-weight: bold;
+}
+
+.surge .sheet-header .death-save-button {
+  padding: 3px 8px;
+  /* Add other button styling */
+}
