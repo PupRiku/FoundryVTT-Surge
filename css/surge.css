@@ -395,12 +395,18 @@
 
 /* Styling Input Fields and Values */
 .surge .skill-value {
-  flex: 0 0 60px; /* Fixed width for value inputs/spans */
+  flex: 0 0 40px; /* Smaller width */
+  font-size: 0.9em;
+  background-color: #f8f8f8;
+}
+
+.surge .skill-total {
+  flex: 0 0 40px; /* Give it a fixed width */
+  font-size: 1.2em; /* Make it stand out */
+  font-weight: bold;
   text-align: center;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  padding: 2px;
-  background-color: #f8f8f8; /* Slightly off-white background */
+  margin-right: 5px; /* Space between total and base input */
+  cursor: help; /* Indicate tooltip is available */
 }
 
 /* Style the tooltip marker */
@@ -826,4 +832,13 @@
 .surge .sheet-header .death-save-button {
   padding: 3px 8px;
   /* Add other button styling */
+}
+
+.surge .sheet-header .species-trait {
+  font-size: 1.1em;
+  font-style: italic;
+  color: #555;
+  margin: 0;
+  text-align: left;
+  padding-left: 5px; /* Align with name input padding */
 }

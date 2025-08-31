@@ -38,6 +38,28 @@
         "GAMEMASTER": "OWNER"
       },
       "pack": "surge.surge-condition-macros"
+    },
+    {
+      "name": "surge-traits",
+      "label": "SURGE! Traits",
+      "path": "./packs/traits.db",
+      "type": "Item",
+      "system": "surge",
+      "ownership": {
+        "PLAYER": "OBSERVER",
+        "TRUSTED": "OBSERVER",
+        "ASSISTANT": "OWNER",
+        "GAMEMASTER": "OWNER"
+      },
+      "pack": "surge.surge-traits"
+    },
+    {
+      "name": "surge-species",
+      "label": "SURGE! Species",
+      "path": "./packs/species.db",
+      "type": "Item",
+      "system": "surge",
+      "pack": "surge.surge-species"
     }
   ],
   "languages": []

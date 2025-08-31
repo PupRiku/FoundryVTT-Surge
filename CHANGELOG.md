@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.10.1] - 2025-08-31
+
+### ✨ Features
+
+- Implemented the unique daily trait-swapping mechanic for the **Djinn** species.
+- Added a "Change Trait" button to the Actor Sheet header that is only visible for Djinn characters.
+- The button's logic removes the current Djinn trait, prompts the user to select a new one from the species' defined options, and adds the new trait item to the sheet, automatically updating any associated skill bonuses.
+
+### 🔧 Maintenance
+
+- Added `isDjinn` check to `ActorSheet.getData` to control UI visibility for the "Change Trait" button.
+- Created the `_onChangeDjinnTrait` handler in `SurgeCharacterSheet` to manage the trait swapping logic.
+
+## [0.10.0] - 2025-08-31
+
+### ✨ Features
+
+- Implemented the core of the **Character Creation (Manual Selection)** workflow.
+- Added automated logic for dropping a `Species` item onto a new Actor Sheet (`_onDropItem handler`). The drop handler now automatically:
+  - Applies the species' attribute bonus.
+  - Sets base passives (Movement, Recovery, Menace).
+  - Calculates and rolls starting HP (`Strength Roll + Species Base HP`) and updates the sheet.
+  - Prompts the user to select a "Chosen Trait" from a list defined on the species item.
+  - Adds the chosen `Trait` item and the `Species` item to the character's sheet.
+- Implemented a system for `Trait` items to grant skill bonuses, which are now automatically calculated and applied to skill totals and rolls.
+- Added a dynamic status label to the Actor Sheet header (e.g., "Unknown Species", "Ponturi (The Manta Ray)") that updates after character creation.
+- Added a "?” placeholder for passive stats (HP, Recovery, etc.) on a blank character sheet, which updates to numerical values after a species is applied.
+- Added UI to the Item Sheet for `species` and `trait` item types, including dropdowns for attributes/skills.
+
+### 🐛 Bug Fixes
+
+- Fixed `traitItems is not defined` error in `ActorSheet.getData` by correcting the function's code.
+- Resolved rendering issues on the Item Sheet for new types (`spell`, `trait`, `species`), including a bug where fields were not appearing due to the types being missing from the `Items.registerSheet` registration list.
+- Fixed a bug where a faulty `template.json` definition for `spell` items caused the Description field to initialize as an object instead of a string.
+
+### 🔧 Maintenance
+
+- Created Compendium packs for "SURGE! Species" and "SURGE! Traits" and added initial data (Ponturi species and its traits).
+- Updated `ActorSheet.getData` to calculate and display derived skill totals (base + trait bonuses) and species/trait info.
+- Updated `_onSkillRoll` to use the total derived skill level for rolls.
+- Added `attributes` and `skills` lists to `CONFIG.SURGE` for populating dropdown menus on Item Sheets.
+- Updated `item-sheet.hbs` with conditional logic (`#unless` or `#if`/`ne`) to hide common fields for `trait` and `species` types for a cleaner UI.
+
 ## [0.9.0] - 2025-05-09
 
 ### ✨ Features

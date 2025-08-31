@@ -41,20 +41,26 @@
       },
       "passives": {
         "hp": {
-          "value": 7,
-          "max": 7,
-          "base": 7
-        },
-        "encounter": { "value": 0, "label": "En-Counter" },
-        "recovery": { "value": 1, "label": "Recovery Points" },
-        "menace": {
+          "value": 0,
+          "max": 0,
           "base": 0,
-          "label": "Menace"
+          "startingMax": 0
+        },
+        "recovery": {
+          "label": "Recovery Points",
+          "value": 0
+        },
+        "menace": {
+          "label": "Menace",
+          "base": 0
+        },
+        "encounter": {
+          "label": "En-Counter",
+          "value": 0
         },
         "movement": {
-          "value": 10,
-          "special": "No penalty swimming submerged",
-          "label": "Movement Speed"
+          "label": "Movement Speed",
+          "value": 0
         }
       },
       "currency": {

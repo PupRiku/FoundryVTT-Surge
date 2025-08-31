@@ -25,6 +25,14 @@
             placeholder='Character Name'
           /></h1>
         {{! Old header-details div removed/empty }}
+        <div class="flexrow" style="align-items: center;">
+          <h3 class="species-trait">{{speciesAndTraitDisplay}}</h3>
+          {{#if isDjinn}}
+            <button type="button" class="change-djinn-trait" title="Change Djinn Trait">
+              <i class="fas fa-sync-alt"></i> Change Trait
+            </button>
+          {{/if}}
+        </div>
       </div>
 
       {{! Level Block }}
@@ -52,40 +60,22 @@
       <div class='passive-grid-item hp'>
         <label title='Hit Points'>HP</label>
         <div class='resource-value flexrow'>
-          <input
-            type='number'
-            name='system.passives.hp.value'
-            value='{{systemData.passives.hp.value}}'
-            placeholder='Current'
-            data-dtype='Number'
-          />
+          {{!-- Use displayHP --}}
+          <input type='text' name='system.passives.hp.value' value='{{displayHP}}' />
           <span> / </span>
-          <input
-            type='number'
-            name='system.passives.hp.max'
-            value='{{systemData.passives.hp.max}}'
-            placeholder='Max'
-            data-dtype='Number'
-            disabled
-            title='Max HP = Starting Max + En-Counter'
-          />
+          {{!-- Use displayMaxHP and make it a text input to accept '?' --}}
+          <input type='text' name='system.passives.hp.max' value='{{displayMaxHP}}' disabled />
         </div>
       </div>
       <div class='passive-grid-item recovery'>
         <label title='{{systemData.passives.recovery.label}}'>Recovery</label>
-        <span
-          class='passive-value'
-        >{{systemData.passives.recovery.value}}</span>
+        {{!-- Use displayRecovery --}}
+        <span class='passive-value'>{{displayRecovery}}</span>
       </div>
       <div class='passive-grid-item movement'>
         <label title='{{systemData.passives.movement.label}}'>Movement</label>
-        <input
-          class='passive-value'
-          type='number'
-          name='system.passives.movement.value'
-          value='{{systemData.passives.movement.value}}'
-          data-dtype='Number'
-        />
+        {{!-- Use displayMovement --}}
+        <input class='passive-value' type='text' name='system.passives.movement.value' value='{{displayMovement}}' />
       </div>
 
       {{! Row 2 }}
@@ -107,10 +97,8 @@
       </div>
       <div class='passive-grid-item menace'>
         <label title='{{systemData.passives.menace.label}}'>Menace</label>
-        <span
-          class="passive-value"
-          title="{{systemData.passives.menace.tooltip}}"
-        >{{systemData.passives.menace.total}}</span> {{!-- Use dynamic tooltip --}}
+        {{!-- Use displayMenace --}}
+        <span class="passive-value" title="{{systemData.passives.menace.tooltip}}">{{displayMenace}}</span>
       </div>
     </div>
     {{! End header-passives-grid }}
@@ -170,12 +158,17 @@
                   data-skill='{{key}}'
                   title='Click to roll {{skill.label}}'
                 >{{skill.label}}</label>
+
+                {{!-- Display the calculated total skill value --}}
+                <span class="skill-total" title="{{skill.tooltip}}">{{skill.total}}</span>
+
                 <input
                   class='skill-value'
                   type='number'
                   name='system.skills.{{key}}.value'
                   value='{{skill.value}}'
                   data-dtype='Number'
+                  title="Base Value"
                 />
               </div>
             {{/each}}

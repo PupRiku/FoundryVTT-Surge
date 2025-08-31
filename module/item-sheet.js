@@ -93,11 +93,16 @@ export class SurgeItemSheet extends ItemSheet {
         int: 'Intelligence',
         cha: 'Charisma',
       };
+
+      context.traitSkills = CONFIG.SURGE?.skills || {};
       console.log(`SURGE DEBUG | ItemSheet dropdown choices prepared.`);
+
+      context.attributeList = CONFIG.SURGE?.attributes || {};
 
       // Log just before returning
       console.log(
-        `SURGE DEBUG | ItemSheet getData END for ${this.item?.name}. Returning context.`
+        `SURGE! | Item Sheet Context (${context.item.name}):`,
+        context
       );
       return context;
     } catch (err) {
@@ -146,8 +151,10 @@ Items.registerSheet(
       'gear',
       'medicine',
       'tool',
+      'trait',
       'treasure',
       'plate',
+      'species',
       'spell',
     ],
     makeDefault: true, // Make this the default sheet for these types

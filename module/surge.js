@@ -27,6 +27,34 @@ Hooks.once('init', () => {
   };
   console.log('SURGE! | Spell Schools defined in CONFIG.SURGE.spellSchools');
 
+  CONFIG.SURGE.skills = {
+    '': '-- None --',
+    clerical: 'Clerical',
+    culture: 'Culture',
+    guile: 'Guile',
+    leathercraft: 'Leathercraft',
+    marksmanship: 'Marksmanship',
+    martial: 'Martial Combat',
+    mechanical: 'Mechanical',
+    medicine: 'Medicine',
+    memory: 'Memory',
+    metallurgy: 'Metallurgy',
+    mystic: 'Mystic',
+    survival: 'Survival',
+    woodcraft: 'Woodcraft',
+  };
+  console.log('SURGE! | Skills defined in CONFIG.SURGE.skills');
+
+  CONFIG.SURGE.attributes = {
+    '': '-- None --',
+    str: 'Strength',
+    dex: 'Dexterity',
+    int: 'Intelligence',
+    cha: 'Charisma',
+    luk: 'Luck',
+  };
+  console.log('SURGE! | Attributes defined in CONFIG.SURGE.attributes');
+
   console.log('SURGE! | Registering effect data constants...');
   // Ensure the variables like bleedingEffectData are defined/accessible here
   CONFIG.SURGE.effectData['bleeding'] = bleedingEffectData;
@@ -1227,14 +1255,81 @@ export class SurgeCharacterSheet extends ActorSheet {
   }
 
   /**
-   * Prepare the data context for Handlebars template rendering.
-   * This method is called each time the sheet needs to be drawn.
-   * @returns {object} The data object for the template.
+   * Prepare data for the Handlebars template.
+   * This provides the data context when rendering the sheet.
+   * @param {object} options Options passed to the getData method.
+   * @returns {object} The data object for template rendering.
    * @override
    */
   async getData(options) {
     const context = await super.getData(options);
     context.systemData = context.actor.system;
+
+    let speciesAndTraitDisplay = 'Unknown Species';
+
+    const speciesItem = this.actor.items.find((i) => i.type === 'species');
+
+    if (speciesItem) {
+      // If a species is found, start with its name
+      let displayText = speciesItem.name;
+
+      // Then, find the first owned item of type 'trait'
+      const traitItem = this.actor.items.find((i) => i.type === 'trait');
+
+      // If a trait is also found, add it in parentheses
+      if (traitItem) {
+        displayText += ` (${traitItem.name})`;
+      }
+      speciesAndTraitDisplay = displayText;
+    }
+
+    // Pass the final string to the template
+    context.speciesAndTraitDisplay = speciesAndTraitDisplay;
+
+    // Check if the character is a Djinn to show the trait-swapping button
+    const isDjinn = speciesItem?.name === 'Djinn';
+    context.isDjinn = isDjinn;
+
+    // --- Calculate Skill Totals from Trait Bonuses ---
+    const skillBonuses = {}; // Object to store bonuses like { culture: 1, medicine: 1 }
+    // This is the line that must exist before the loop below
+    const traitItems = this.actor.items.filter((item) => item.type === 'trait');
+
+    // Loop through traits and accumulate bonuses
+    for (const trait of traitItems) {
+      const skill = trait.system.skillBonus?.skill;
+      const bonus = trait.system.skillBonus?.value || 0;
+      if (skill && bonus !== 0) {
+        skillBonuses[skill] = (skillBonuses[skill] || 0) + bonus;
+      }
+    }
+
+    // Now, loop through the character's skills to add the calculated total and a tooltip
+    for (const [key, skill] of Object.entries(context.systemData.skills)) {
+      const bonus = skillBonuses[key] || 0;
+      skill.total = skill.value + bonus;
+      skill.tooltip = `Base: ${skill.value} + Traits: ${bonus}`;
+    }
+    // --- END Skill Total Calculation ---
+
+    const hasSpecies = this.actor.items.some((i) => i.type === 'species');
+
+    // Create display-specific variables. Show '?' if no species is present.
+    context.displayHP = hasSpecies ? context.systemData.passives.hp.value : '?';
+    context.displayMaxHP = hasSpecies
+      ? context.systemData.passives.hp.max
+      : '?';
+    context.displayRecovery = hasSpecies
+      ? context.systemData.passives.recovery.value
+      : '?';
+    context.displayMovement = hasSpecies
+      ? context.systemData.passives.movement.value
+      : '?';
+    // Menace total is calculated, so we check for species before showing it.
+    context.displayMenace = hasSpecies
+      ? context.systemData.passives.menace.total
+      : '?';
+    // --- END NEW ---
 
     // --- Calculate Max Actions ---
     const dexLevel = context.systemData.attributes?.dex?.value ?? 1;
@@ -1257,10 +1352,7 @@ export class SurgeCharacterSheet extends ActorSheet {
     // --- Calculate Total Menace ---
     const baseMenace = Number(context.systemData.passives?.menace?.base ?? 0);
     let equipmentMenace = 0;
-
-    // Loop through all owned items to find equipped contributors
     for (const item of this.actor.items) {
-      // Check if item is equipped AND has a numeric menaceContribution
       if (
         item.system?.equipped === true &&
         typeof item.system?.menaceContribution === 'number'
@@ -1268,59 +1360,35 @@ export class SurgeCharacterSheet extends ActorSheet {
         equipmentMenace += item.system.menaceContribution;
       }
     }
-
-    // Calculate total and add it to the context for the template
     const totalMenace = baseMenace + equipmentMenace;
     context.systemData.passives.menace.total = totalMenace;
-
-    // Create a helpful tooltip string (optional but nice)
     context.systemData.passives.menace.tooltip = `Base: ${baseMenace} + Equip: ${equipmentMenace} = Total: ${totalMenace}`;
-    // --- End of Menace Calculation ---
 
     // --- Calculate HP Status Label & Death Save Button State ---
     let hpStatusLabel = 'Healthy';
     let deathSaveButtonDisabled = true;
     const currentHp = context.systemData.passives.hp.value;
     const maxHp = context.systemData.passives.hp.max;
-
-    // Check for core "dead" status first (skull icon)
-    const defeatedStatusId = CONFIG.Combat.defeatedStatusId ?? 'dead'; // Get the system's ID for "defeated"
+    const defeatedStatusId = CONFIG.Combat.defeatedStatusId ?? 'dead';
     const isActuallyDead = this.actor.statuses.has(defeatedStatusId);
-
-    // Read the deathSavesStage flag directly from the actor's flags
-    // This flag is set by the "Dying (Conscious)" or "Dying (Unconscious)" Active Effects
     const deathSaveEffect = this.actor.effects.find(
       (e) => e.flags?.surge?.deathSavesStage && !e.disabled
     );
     const actorDeathSaveStage = deathSaveEffect?.flags?.surge?.deathSavesStage;
 
-    console.log(
-      `SURGE DEBUG (getData) | Found deathSaveEffect:`,
-      deathSaveEffect
-    );
-    console.log(
-      `SURGE DEBUG (getData) | actorDeathSaveStage from effect.flags: ${actorDeathSaveStage}`
-    );
-
     if (isActuallyDead) {
       hpStatusLabel = 'Dead';
       deathSaveButtonDisabled = true;
     } else if (actorDeathSaveStage === 'conscious') {
-      // <<< Check actor's flag
       hpStatusLabel = 'Dying - Conscious';
       deathSaveButtonDisabled = false;
     } else if (actorDeathSaveStage === 'unconscious') {
-      // <<< Check actor's flag
       hpStatusLabel = 'Dying - Unconscious';
       deathSaveButtonDisabled = false;
     } else if (currentHp <= 0) {
-      // This fallback should ideally not be hit if the hook applies the effect correctly.
-      // It indicates the "Death Saves (Conscious)" effect/flag wasn't yet present when getData ran.
-      hpStatusLabel = 'Dying (Awaiting State)'; // Changed label for clarity
-      deathSaveButtonDisabled = false; // Still enable button if HP is 0
-      console.warn(
-        `SURGE WARN (getData) | HP is <= 0 but no deathSavesStage flag found on actor. Defaulting to Dying.`
-      );
+      hpStatusLabel = 'Dying (Awaiting State)';
+      deathSaveButtonDisabled = false;
+      // console.warn(`SURGE WARN (getData) | HP is <= 0 but no deathSavesStage effect found. Defaulting to Dying.`);
     } else if (maxHp > 0 && currentHp <= maxHp / 2) {
       hpStatusLabel = 'Bloodied';
       deathSaveButtonDisabled = true;
@@ -1331,13 +1399,8 @@ export class SurgeCharacterSheet extends ActorSheet {
       hpStatusLabel = 'Status Unknown';
       deathSaveButtonDisabled = true;
     }
-
     context.hpStatusLabel = hpStatusLabel;
     context.deathSaveButtonDisabled = deathSaveButtonDisabled;
-    console.log(
-      `SURGE DEBUG (getData) | Final HP Status: ${hpStatusLabel}, Death Save Button Disabled: ${deathSaveButtonDisabled}`
-    );
-    // --- END NEW ---
 
     console.log('SURGE! | Character Sheet Data Context:', context);
     return context;
@@ -1356,6 +1419,7 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // --- Header Listeners ---
     html.find('.death-save-button').click(this._onMakeDeathSave.bind(this));
+    html.find('.change-djinn-trait').click(this._onChangeDjinnTrait.bind(this));
 
     // --- Roll Listeners ---
     html
@@ -1403,6 +1467,253 @@ export class SurgeCharacterSheet extends ActorSheet {
       .click(this._onEffectDelete.bind(this));
 
     // console.log('SURGE! | Attached CUSTOM effect control listeners.');
+  }
+
+  /**
+   * Handle dropping an Item onto the Actor Sheet.
+   * This is used for the "Choose a Species" character creation step.
+   * @param {DragEvent} event The concluding drag event.
+   * @param {object} data   The data transfer object.
+   * @override
+   */
+  async _onDropItem(event, data) {
+    // Prevent the default drop behavior
+    event.preventDefault();
+    console.log('SURGE | _onDropItem triggered', data);
+
+    // Get the dropped Item from the drop data
+    const item = await Item.fromDropData(data);
+    if (!item) return false;
+
+    // --- Handle SPECIES Drop for Character Creation ---
+    if (item.type === 'species') {
+      console.log(`SURGE | Dropped item is a Species: ${item.name}`);
+      const actor = this.actor;
+
+      // 1. Check if actor already has a species
+      const existingSpecies = actor.items.find((i) => i.type === 'species');
+      if (existingSpecies) {
+        ui.notifications.warn(
+          `This character already has a Species (${existingSpecies.name}). Please remove it before adding a new one.`
+        );
+        return false;
+      }
+
+      // 2. Apply Species Attribute Bonus
+      const attrBonus = item.system.attributeBonus;
+      if (attrBonus?.attribute && attrBonus?.value) {
+        const currentAttr = actor.system.attributes[attrBonus.attribute].value;
+        await actor.update({
+          [`system.attributes.${attrBonus.attribute}.value`]:
+            currentAttr + attrBonus.value,
+        });
+        ui.notifications.info(
+          `${item.name} applies +${
+            attrBonus.value
+          } ${attrBonus.attribute.toUpperCase()}.`
+        );
+      }
+
+      // 3. Set Base Passives (Movement, Recovery, Menace)
+      await actor.update({
+        'system.passives.movement.value': item.system.baseMovement || 10,
+        'system.passives.recovery.value': item.system.baseRecovery || 0,
+        'system.passives.menace.base': item.system.baseMenace || 0,
+      });
+      ui.notifications.info(`Base passives set by ${item.name}.`);
+
+      // 4. Calculate Starting HP
+      const strLevel = actor.system.attributes.str.value; // Use current STR for the roll
+      const hpRoll = await this._performRoll(
+        strLevel,
+        `${actor.name}'s Starting HP (Strength Roll)`,
+        [],
+        'str'
+      );
+      // NOTE: _performRoll sends to chat but doesn't return the roll object. We need to roll again here to get the total.
+      const hpRollTableData = this._rollTable[strLevel];
+      const hpRollFormula = `${hpRollTableData.dice}d6x6 + ${hpRollTableData.mod}`;
+      const startingHpRoll = await new Roll(hpRollFormula).evaluate({
+        async: true,
+      });
+      const baseHp = item.system.baseHp || 0;
+      const startingMaxHp = startingHpRoll.total + baseHp;
+
+      await actor.update({
+        'system.passives.hp.base': baseHp,
+        'system.passives.hp.startingMax': startingMaxHp,
+        'system.passives.hp.value': startingMaxHp,
+        'system.passives.hp.max': startingMaxHp, // max will be recalculated by getData later if En-Counter changes
+      });
+      // Post the HP roll result to chat for the player to see
+      startingHpRoll.toMessage({
+        speaker: ChatMessage.getSpeaker({ actor: actor }),
+        flavor: `Starting HP Roll (${strLevel} STR): ${startingHpRoll.total} + ${baseHp} Base = ${startingMaxHp} Max HP`,
+      });
+
+      // 5. Prompt for "Chosen Trait"
+      // This part assumes your 'trait' items are in a compendium named 'surge-traits'
+      const traitPack = game.packs.get('surge.surge-traits');
+      if (!traitPack) {
+        ui.notifications.error(
+          "Could not find the 'SURGE! Traits' compendium pack (ID: surge-traits)."
+        );
+        return false;
+      }
+      await traitPack.getIndex(); // Load the pack index
+
+      let traitChoices = {};
+      for (const traitOption of item.system.traitOptions) {
+        // Assuming traitOptions on the species item stores the NAME of the trait item
+        const traitIndexEntry = traitPack.index.find(
+          (entry) => entry.name === traitOption.name
+        );
+        if (traitIndexEntry) {
+          traitChoices[traitIndexEntry._id] = traitOption.name;
+        }
+      }
+
+      const chosenTraitId = await new Promise((resolve) => {
+        new Dialog({
+          title: `Choose ${item.name} Trait`,
+          content: `<p>As a ${item.name}, you must choose a trait:</p>
+                      <div class="form-group">
+                        <label for="traitChoice">Spirit Guide:</label>
+                        <select id="traitChoice" name="traitChoice">
+                            ${Object.entries(traitChoices)
+                              .map(
+                                ([id, name]) =>
+                                  `<option value="${id}">${name}</option>`
+                              )
+                              .join('')}
+                        </select>
+                      </div>`,
+          buttons: {
+            select: {
+              icon: '<i class="fas fa-check"></i>',
+              label: 'Select Trait',
+              callback: (html) =>
+                resolve(html.find('select[name="traitChoice"]').val()),
+            },
+          },
+          default: 'select',
+          close: () => resolve(null),
+        }).render(true);
+      });
+
+      if (chosenTraitId) {
+        const chosenTrait = await traitPack.getDocument(chosenTraitId);
+        if (chosenTrait) {
+          await actor.createEmbeddedDocuments('Item', [chosenTrait.toObject()]);
+          ui.notifications.info(`Trait added: ${chosenTrait.name}`);
+        }
+      }
+
+      // 6. Finally, add the Species item itself to the character sheet
+      return actor.createEmbeddedDocuments('Item', [item.toObject()]);
+    } // End if species
+
+    // If the dropped item was NOT a species, fall back to the default sheet behavior
+    return super._onDropItem(event, data);
+  }
+
+  /**
+   * Handle the click on the "Change Djinn Trait" button.
+   * Removes the current Djinn trait, prompts for a new one, and adds it.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onChangeDjinnTrait(event) {
+    event.preventDefault();
+    const actor = this.actor;
+    console.log(`SURGE | _onChangeDjinnTrait triggered for ${actor.name}`);
+
+    // 1. Find the Djinn species item on the actor to get the available trait options
+    const djinnSpeciesItem = actor.items.find(
+      (i) => i.type === 'species' && i.name === 'Djinn'
+    );
+    if (!djinnSpeciesItem)
+      return ui.notifications.error(
+        'Could not find Djinn species item on this character.'
+      );
+
+    const traitOptions = djinnSpeciesItem.system.traitOptions || [];
+    if (traitOptions.length === 0)
+      return ui.notifications.error(
+        'No trait options are defined on the Djinn species item.'
+      );
+
+    // 2. Find and remove the CURRENT Djinn trait item(s) from the actor
+    const traitOptionNames = traitOptions.map((t) => t.name); // Get a list of just the names
+    const currentDjinnTraits = actor.items.filter(
+      (i) => i.type === 'trait' && traitOptionNames.includes(i.name)
+    );
+
+    if (currentDjinnTraits.length > 0) {
+      console.log(
+        `SURGE | Removing current Djinn traits:`,
+        currentDjinnTraits.map((t) => t.name)
+      );
+      const idsToDelete = currentDjinnTraits.map((t) => t.id);
+      await actor.deleteEmbeddedDocuments('Item', idsToDelete);
+    }
+
+    // 3. Prompt the user to select a new trait
+    const traitPack = game.packs.get('surge.surge-traits');
+    if (!traitPack)
+      return ui.notifications.error(
+        "Could not find the 'SURGE! Traits' compendium pack."
+      );
+    await traitPack.getIndex(); // Load the index of trait items
+
+    let traitChoices = {};
+    for (const option of traitOptions) {
+      const traitIndexEntry = traitPack.index.find(
+        (entry) => entry.name === option.name
+      );
+      if (traitIndexEntry) {
+        traitChoices[traitIndexEntry._id] = option.name;
+      }
+    }
+
+    const chosenTraitId = await new Promise((resolve) => {
+      new Dialog({
+        title: 'Change Djinn Trait',
+        content: `<p>Choose a new daily mutation:</p>
+                  <div class="form-group">
+                    <label for="traitChoice">Trait:</label>
+                    <select id="traitChoice" name="traitChoice">
+                        ${Object.entries(traitChoices)
+                          .map(
+                            ([id, name]) =>
+                              `<option value="${id}">${name}</option>`
+                          )
+                          .join('')}
+                    </select>
+                  </div>`,
+        buttons: {
+          select: {
+            icon: '<i class="fas fa-check"></i>',
+            label: 'Select Trait',
+            callback: (html) =>
+              resolve(html.find('select[name="traitChoice"]').val()),
+          },
+        },
+        default: 'select',
+        close: () => resolve(null),
+      }).render(true);
+    });
+
+    // 4. Add the newly chosen trait item to the actor
+    if (chosenTraitId) {
+      const chosenTrait = await traitPack.getDocument(chosenTraitId);
+      if (chosenTrait) {
+        await actor.createEmbeddedDocuments('Item', [chosenTrait.toObject()]);
+        ui.notifications.info(`Djinn trait changed to: ${chosenTrait.name}`);
+      }
+    } else {
+      console.log('SURGE | Djinn trait selection cancelled.');
+    }
   }
 
   /**
@@ -1634,7 +1945,7 @@ export class SurgeCharacterSheet extends ActorSheet {
   /**
    * Handle clicking on a skill label to roll it.
    * Checks for Shift/Ctrl keys for modified rolls (e.g., Melee Attack/Defense).
-   * Includes bonus for Invisible (Guile) and passes modifiers.
+   * Includes bonuses from Traits and the Invisible condition.
    * @param {Event} event The triggering click event
    * @private
    */
@@ -1643,62 +1954,72 @@ export class SurgeCharacterSheet extends ActorSheet {
     const element = event.currentTarget;
     const skillKey = element.dataset.skill;
     const skill = this.actor.system.skills[skillKey];
-    const actorAttributes = this.actor.system.attributes;
 
     if (skill) {
-      const level = skill.value;
+      // --- START: Calculate Total Skill Level ---
+      let skillBonus = 0;
+      // Filter for trait items that provide a bonus to the specific skill being rolled
+      const traitItems = this.actor.items.filter(
+        (item) => item.type === 'trait'
+      );
+      for (const trait of traitItems) {
+        if (trait.system.skillBonus?.skill === skillKey) {
+          skillBonus += trait.system.skillBonus?.value || 0;
+        }
+      }
+      // The final level for the roll is the base value plus any bonuses from traits
+      const level = skill.value + skillBonus;
+      console.log(
+        `SURGE | Rolling ${skillKey}. Base: ${skill.value}, Trait Bonus: ${skillBonus}, Total Level for Roll: ${level}`
+      );
+      // --- END: Calculate Total Skill Level ---
+
       const isShift = event.shiftKey;
       const isCtrl = event.ctrlKey || event.metaKey;
-
-      // Determine primary attribute possibly affected by equipment penalties
+      const actorAttributes = this.actor.system.attributes;
       let primaryAttributeKey = null;
       if (skillKey === 'guile' || skillKey === 'marksmanship')
         primaryAttributeKey = 'dex';
 
-      // --- Get base modifiers (equipment penalties) ---
-      // Ensure we use the same variable name consistently! Let's use 'baseModifiers'.
+      // Get base modifiers (from equipment penalties)
       let baseModifiers = this._getEquippedPenalties(
         primaryAttributeKey,
         skillKey
       );
-      // Ensure it's always an array, even if _getEquippedPenalties returns null/undefined
       if (!Array.isArray(baseModifiers)) {
         baseModifiers = [];
       }
 
-      // --- Check for Invisible Bonus ---
+      // Check for Invisible Bonus specifically for Guile
       const isInvisible = this.actor.flags?.surge?.invisible === true;
       if (isInvisible && skillKey === 'guile') {
         console.log(`SURGE | Actor is Invisible. Adding +6 Guile bonus.`);
         baseModifiers.push({ value: 6, label: 'Invisible (Stealth)' });
       }
-      // --- End Invisible Check ---
 
       console.log(
-        `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Modifiers Found (incl. Invisible):`,
+        `SURGE DEBUG | _onSkillRoll for ${skillKey} - Base Modifiers Found:`,
         JSON.parse(JSON.stringify(baseModifiers))
       );
 
       // --- Handle skill-specific logic ---
       if (skillKey === 'martial') {
         if (isShift) {
-          if (this.actor.flags?.surge?.crushed === true) {
-            ui.notifications.warn(
-              `${this.actor.name} cannot make melee attacks while Crushed.`
-            );
-            return;
-          }
-          if (this.actor.flags?.surge?.pinned === true) {
-            ui.notifications.warn(
-              `${this.actor.name} cannot make physical attacks while Pinned.`
-            );
-            return;
-          }
           // Melee Weapon Attack
+          if (
+            this.actor.flags?.surge?.crushed === true ||
+            this.actor.flags?.surge?.pinned === true
+          ) {
+            ui.notifications.warn(
+              `${this.actor.name} cannot make physical attacks while ${
+                this.actor.flags?.surge?.crushed ? 'Crushed' : 'Pinned'
+              }.`
+            );
+            return;
+          }
           let attackBonus = [
             { value: actorAttributes.str?.value ?? 0, label: 'STR Level' },
           ];
-          // Combine baseModifiers (penalties/invis) with attack bonus
           let finalModifiers = [...baseModifiers, ...attackBonus].filter(
             (m) => m.value !== 0
           );
@@ -1707,29 +2028,25 @@ export class SurgeCharacterSheet extends ActorSheet {
             `Melee Weapon Attack (${skill.label})`,
             finalModifiers,
             'str'
-          ); // Pass attr key
+          );
         } else if (isCtrl) {
           // Melee Defense
-          // Assuming _rollMeleeDefense handles its own base modifiers internally if needed
           await this._rollMeleeDefense();
         } else {
           // Basic Martial Check
-          // Use baseModifiers directly (already filtered if needed by _getEquippedPenalties or _performRoll)
           await this._performRoll(
             level,
             `${skill.label} Check`,
             baseModifiers,
             'str'
-          ); // Pass attr key
+          );
         }
       } else if (skillKey === 'mystic') {
         if (isCtrl) {
           // Magic Defense
-          // Assuming _rollMagicDefense handles its own base modifiers internally if needed
           await this._rollMagicDefense();
         } else {
           // Basic Mystic Check
-          // Get only mystic-specific penalties, don't include invis bonus here unless intended
           let mysticPenalties = this._getEquippedPenalties(null, skillKey);
           if (!Array.isArray(mysticPenalties)) {
             mysticPenalties = [];
@@ -1739,24 +2056,19 @@ export class SurgeCharacterSheet extends ActorSheet {
             `${skill.label} Check`,
             mysticPenalties,
             'int'
-          ); // Pass attr key
+          );
         }
       } else {
         // --- Other skill basic checks (Handles Guile, Marksmanship, etc.) ---
-        // This block uses baseModifiers, which now includes the Invisible bonus for Guile
-        // Also determine attributeKey for _performRoll if possible/needed
         let associatedAttrKey = null;
         if (skillKey === 'guile' || skillKey === 'marksmanship')
           associatedAttrKey = 'dex';
-        // Add other skill->attribute mappings if relevant for _performRoll context
-
-        // Use baseModifiers directly
         await this._performRoll(
           level,
           `${skill.label} Check`,
           baseModifiers,
           associatedAttrKey
-        ); // <<< Ensure 'baseModifiers' is used here
+        );
       }
     } else {
       console.error(`SURGE | Could not find skill data for key: ${skillKey}`);

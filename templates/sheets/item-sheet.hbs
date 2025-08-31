@@ -27,54 +27,55 @@
     {{! <nav class="sheet-tabs tabs" data-group="primary"><a class="item active" data-tab="description">Description</a><a class="item" data-tab="details">Details</a></nav> }}
     <div class='item-sheet-content'>
       {{! Wrapper for padding/styling }}
+      {{#if (and (ne item.type 'trait') (ne item.type 'species'))}}
+        {{! Common Fields Section }}
+        <div class='form-group'>
+          <label>Description</label>
+          {{! Use editor for potentially long descriptions }}
+          {{editor
+            systemData.description
+            target='system.description'
+            button=true
+            owner=owner
+            editable=editable
+          }}
+        </div>
 
-      {{! Common Fields Section }}
-      <div class='form-group'>
-        <label>Description</label>
-        {{! Use editor for potentially long descriptions }}
-        {{editor
-          systemData.description
-          target='system.description'
-          button=true
-          owner=owner
-          editable=editable
-        }}
-      </div>
-
-      {{! Grid for common numerical stats }}
-      <div class='grid grid-3col'>
-        <div class='form-group'>
-          <label>Quantity</label>
-          <input
-            type='number'
-            name='system.quantity'
-            value='{{systemData.quantity}}'
-            data-dtype='Number'
-          />
+        {{! Grid for common numerical stats }}
+        <div class='grid grid-3col'>
+          <div class='form-group'>
+            <label>Quantity</label>
+            <input
+              type='number'
+              name='system.quantity'
+              value='{{systemData.quantity}}'
+              data-dtype='Number'
+            />
+          </div>
+          <div class='form-group'>
+            <label>Weight</label>
+            {{! Changed from Encumbrance }}
+            <input
+              type='number'
+              step='any'
+              name='system.weight'
+              value='{{systemData.weight}}'
+              data-dtype='Number'
+            />
+          </div>
+          <div class='form-group'>
+            <label>Price (Gold)</label>
+            {{! Changed from Cost }}
+            <input
+              type='number'
+              name='system.price'
+              value='{{systemData.price}}'
+              data-dtype='Number'
+            />
+          </div>
         </div>
-        <div class='form-group'>
-          <label>Weight</label>
-          {{! Changed from Encumbrance }}
-          <input
-            type='number'
-            step='any'
-            name='system.weight'
-            value='{{systemData.weight}}'
-            data-dtype='Number'
-          />
-        </div>
-        <div class='form-group'>
-          <label>Price (Gold)</label>
-          {{! Changed from Cost }}
-          <input
-            type='number'
-            name='system.price'
-            value='{{systemData.price}}'
-            data-dtype='Number'
-          />
-        </div>
-      </div>
-      <hr />
+        <hr />
+      {{/if}}
 
       {{! === Type-Specific Fields === }}
       {{! Use #if blocks to show fields only for the correct item type }}
@@ -520,6 +521,125 @@
           </div>
         </div>
       {{/if}}
+
+      {{! ***** TRAIT FIELDS ***** }}
+      {{#if (eq item.type 'trait')}}
+        <div class='trait-details item-details-section'>
+          <h3>Trait Details</h3>
+          <div class='form-group'>
+            <label>Skill to Bonus</label>
+            <select name='system.skillBonus.skill'>
+              {{! Use the selectOptions helper with the list we passed from getData }}
+              {{selectOptions
+                traitSkills
+                selected=systemData.skillBonus.skill
+                localize=false
+              }}
+            </select>
+          </div>
+          <div class='form-group'>
+            <label>Bonus Value</label>
+            <input
+              type='number'
+              name='system.skillBonus.value'
+              value='{{systemData.skillBonus.value}}'
+              data-dtype='Number'
+              step='1'
+            />
+          </div>
+        </div>
+      {{/if}}
+      {{! ***** END TRAIT FIELDS ***** }}
+
+      {{! ***** START SPECIES FIELDS ***** }}
+      {{#if (eq item.type 'species')}}
+        <div class='species-details item-details-section'>
+          <h3>Species Details</h3>
+
+          {{! Attribute Bonus }}
+          <div
+            class='form-group flexrow'
+            style='align-items: flex-end; gap: 10px;'
+          >
+            <div style='flex: 2;'>
+              <label>Attribute Bonus</label>
+              <select name='system.attributeBonus.attribute'>
+                {{selectOptions
+                  attributeList
+                  selected=systemData.attributeBonus.attribute
+                  localize=false
+                }}
+              </select>
+            </div>
+            <div style='flex: 1;'>
+              <label>Bonus Value</label>
+              <input
+                type='number'
+                name='system.attributeBonus.value'
+                value='{{systemData.attributeBonus.value}}'
+                data-dtype='Number'
+              />
+            </div>
+          </div>
+
+          {{! Base Passives }}
+          <div class='grid grid-4col'>
+            <div class='form-group'>
+              <label>Base HP</label>
+              <input
+                type='number'
+                name='system.baseHp'
+                value='{{systemData.baseHp}}'
+                data-dtype='Number'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Base Recovery</label>
+              <input
+                type='number'
+                name='system.baseRecovery'
+                value='{{systemData.baseRecovery}}'
+                data-dtype='Number'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Base Movement</label>
+              <input
+                type='number'
+                name='system.baseMovement'
+                value='{{systemData.baseMovement}}'
+                data-dtype='Number'
+              />
+            </div>
+            <div class='form-group'>
+              <label>Base Menace</label>
+              <input
+                type='number'
+                name='system.baseMenace'
+                value='{{systemData.baseMenace}}'
+                data-dtype='Number'
+              />
+            </div>
+          </div>
+
+          {{! Trait Options (Read-Only Display) }}
+          <div class='form-group'>
+            <label>Trait Options</label>
+            <div class='readonly-list'>
+              {{#each systemData.traitOptions as |trait id|}}
+                <span class='penalty-item'>{{trait.name}}</span>
+              {{else}}
+                <span>None</span>
+              {{/each}}
+            </div>
+            <small>(Trait Options are set via macro for now, as editing this
+              list directly is complex.)</small>
+          </div>
+
+        </div>
+      {{/if}}
+      {{! ***** END SPECIES FIELDS ***** }}
+
     </div>
     {{! End item-sheet-content }}
   </section>
