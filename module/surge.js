@@ -1286,37 +1286,24 @@ export class SurgeCharacterSheet extends ActorSheet {
     const context = await super.getData(options);
     context.systemData = context.actor.system;
 
+    // --- Species & Trait Info ---
     let speciesAndTraitDisplay = 'Unknown Species';
-
     const speciesItem = this.actor.items.find((i) => i.type === 'species');
-
     if (speciesItem) {
-      // If a species is found, start with its name
       let displayText = speciesItem.name;
-
-      // Then, find the first owned item of type 'trait'
       const traitItem = this.actor.items.find((i) => i.type === 'trait');
-
-      // If a trait is also found, add it in parentheses
       if (traitItem) {
         displayText += ` (${traitItem.name})`;
       }
       speciesAndTraitDisplay = displayText;
     }
-
-    // Pass the final string to the template
     context.speciesAndTraitDisplay = speciesAndTraitDisplay;
-
-    // Check if the character is a Djinn to show the trait-swapping button
     const isDjinn = speciesItem?.name === 'Djinn';
     context.isDjinn = isDjinn;
 
     // --- Calculate Skill Totals from Trait Bonuses ---
-    const skillBonuses = {}; // Object to store bonuses like { culture: 1, medicine: 1 }
-    // This is the line that must exist before the loop below
+    const skillBonuses = {};
     const traitItems = this.actor.items.filter((item) => item.type === 'trait');
-
-    // Loop through traits and accumulate bonuses
     for (const trait of traitItems) {
       const skill = trait.system.skillBonus?.skill;
       const bonus = trait.system.skillBonus?.value || 0;
@@ -1324,42 +1311,22 @@ export class SurgeCharacterSheet extends ActorSheet {
         skillBonuses[skill] = (skillBonuses[skill] || 0) + bonus;
       }
     }
-
-    // Now, loop through the character's skills to add the calculated total and a tooltip
     for (const [key, skill] of Object.entries(context.systemData.skills)) {
       const bonus = skillBonuses[key] || 0;
       skill.total = skill.value + bonus;
       skill.tooltip = `Base: ${skill.value} + Traits: ${bonus}`;
     }
-    // --- END Skill Total Calculation ---
 
-    const hasSpecies = this.actor.items.some((i) => i.type === 'species');
+    // --- DERIVED STAT CALCULATIONS (MUST HAPPEN BEFORE DISPLAY LOGIC) ---
 
-    // Create display-specific variables. Show '?' if no species is present.
-    context.displayHP = hasSpecies ? context.systemData.passives.hp.value : '?';
-    context.displayMaxHP = hasSpecies
-      ? context.systemData.passives.hp.max
-      : '?';
-    context.displayRecovery = hasSpecies
-      ? context.systemData.passives.recovery.value
-      : '?';
-    context.displayMovement = hasSpecies
-      ? context.systemData.passives.movement.value
-      : '?';
-    // Menace total is calculated, so we check for species before showing it.
-    context.displayMenace = hasSpecies
-      ? context.systemData.passives.menace.total
-      : '?';
-    // --- END NEW ---
-
-    // --- Calculate Max Actions ---
+    // Calculate Max Actions
     const dexLevel = context.systemData.attributes?.dex?.value ?? 1;
     context.calculatedActions = {
       max: Math.floor(dexLevel / 2) + 2,
       label: 'Actions per Turn',
     };
 
-    // --- Calculate Max HP ---
+    // Calculate Max HP
     const baseHp = context.systemData.passives?.hp?.base ?? 0;
     const encounter = context.systemData.passives?.encounter?.value ?? 0;
     const startingMaxHp =
@@ -1370,7 +1337,7 @@ export class SurgeCharacterSheet extends ActorSheet {
       context.systemData.passives.hp.max
     );
 
-    // --- Calculate Total Menace ---
+    // Calculate Total Menace
     const baseMenace = Number(context.systemData.passives?.menace?.base ?? 0);
     let equipmentMenace = 0;
     for (const item of this.actor.items) {
@@ -1385,7 +1352,26 @@ export class SurgeCharacterSheet extends ActorSheet {
     context.systemData.passives.menace.total = totalMenace;
     context.systemData.passives.menace.tooltip = `Base: ${baseMenace} + Equip: ${equipmentMenace} = Total: ${totalMenace}`;
 
-    // --- Calculate HP Status Label & Death Save Button State ---
+    // --- DISPLAY LOGIC (MOVED TO THE END) ---
+
+    const hasSpecies = this.actor.items.some((i) => i.type === 'species');
+
+    // Create display-specific variables. Show '?' if no species is present.
+    context.displayHP = hasSpecies ? context.systemData.passives.hp.value : '?';
+    context.displayMaxHP = hasSpecies
+      ? context.systemData.passives.hp.max
+      : '?';
+    context.displayRecovery = hasSpecies
+      ? context.systemData.passives.recovery.value
+      : '?';
+    context.displayMovement = hasSpecies
+      ? context.systemData.passives.movement.value
+      : '?';
+    context.displayMenace = hasSpecies
+      ? context.systemData.passives.menace.total
+      : '?';
+
+    // Calculate HP Status Label & Death Save Button State
     let hpStatusLabel = 'Healthy';
     let deathSaveButtonDisabled = true;
     const currentHp = context.systemData.passives.hp.value;
@@ -1406,18 +1392,19 @@ export class SurgeCharacterSheet extends ActorSheet {
     } else if (actorDeathSaveStage === 'unconscious') {
       hpStatusLabel = 'Dying - Unconscious';
       deathSaveButtonDisabled = false;
-    } else if (currentHp <= 0) {
+    } else if (currentHp <= 0 && hasSpecies) {
+      // Only show dying state if they have a species
       hpStatusLabel = 'Dying (Awaiting State)';
       deathSaveButtonDisabled = false;
-      // console.warn(`SURGE WARN (getData) | HP is <= 0 but no deathSavesStage effect found. Defaulting to Dying.`);
     } else if (maxHp > 0 && currentHp <= maxHp / 2) {
       hpStatusLabel = 'Bloodied';
       deathSaveButtonDisabled = true;
-    } else if (maxHp > 0 && currentHp > maxHp / 2) {
-      hpStatusLabel = 'Healthy';
+    } else if (!hasSpecies) {
+      // If no species, show unknown
+      hpStatusLabel = 'Unknown';
       deathSaveButtonDisabled = true;
     } else {
-      hpStatusLabel = 'Status Unknown';
+      hpStatusLabel = 'Healthy';
       deathSaveButtonDisabled = true;
     }
     context.hpStatusLabel = hpStatusLabel;
@@ -1425,17 +1412,12 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // --- Calculate BP Costs & Affordability for UI ---
     const currentBp = context.systemData.buyPoints.value || 0;
-
-    // Attributes
     for (const attr of Object.values(context.systemData.attributes)) {
-      attr.cost = 6; // Flat cost
+      attr.cost = 6;
       attr.isAffordable = currentBp >= attr.cost && attr.value < 20;
     }
-
-    // Skills
     for (const skill of Object.values(context.systemData.skills)) {
       const nextLevel = skill.total + 1;
-      // Get cost from the static table we defined earlier
       const cost = SurgeCharacterSheet.SKILL_COST_TABLE[nextLevel] || 999;
       skill.cost = cost;
       skill.isAffordable = currentBp >= skill.cost && skill.total < 20;
@@ -1577,9 +1559,7 @@ export class SurgeCharacterSheet extends ActorSheet {
       // NOTE: _performRoll sends to chat but doesn't return the roll object. We need to roll again here to get the total.
       const hpRollTableData = this._rollTable[strLevel];
       const hpRollFormula = `${hpRollTableData.dice}d6x6 + ${hpRollTableData.mod}`;
-      const startingHpRoll = await new Roll(hpRollFormula).evaluate({
-        async: true,
-      });
+      const startingHpRoll = await new Roll(hpRollFormula).evaluate();
       const baseHp = item.system.baseHp || 0;
       const startingMaxHp = startingHpRoll.total + baseHp;
 
