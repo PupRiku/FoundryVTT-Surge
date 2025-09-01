@@ -322,6 +322,10 @@
   border-color: #ccc;
 }
 
+.surge .attribute-block .flexrow {
+  flex-grow: 0; /* Prevent this row from stretching */
+}
+
 .surge .attribute-block-label {
   font-size: 0.8em;
   font-weight: bold;
@@ -370,6 +374,7 @@
   gap: 10px; /* Space between label and value */
   padding: 2px 0;
   border-bottom: 1px solid #eee; /* Faint line between items */
+  justify-content: space-between;
 }
 /* Remove border for last item */
 .surge .skill-item:last-child {
@@ -383,6 +388,9 @@
   font-weight: bold;
   text-align: left; /* Changed alignment */
   margin: 0;
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 0;
 }
 
 /* Style clickable labels */
@@ -847,4 +855,47 @@
   margin: 0;
   text-align: left;
   padding-left: 5px; /* Align with name input padding */
+}
+
+/* Style for the Spend BP buttons */
+.surge .spend-bp-button {
+  /* --- Core Properties --- */
+  padding: 3px 6px;
+  margin-top: 5px;
+  width: 85%; /* Set width relative to the attribute block */
+  max-width: 90px;
+
+  /* --- Appearance --- */
+  font-size: 0.8em;
+  text-align: center;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background: #f0f0f0;
+  line-height: 1.2;
+  white-space: nowrap; /* Prevent text from wrapping */
+
+  /* --- Sizing & Alignment --- */
+  height: auto; /* Let height be determined by content */
+  box-sizing: border-box; /* Include padding/border in width calculation */
+  align-self: center; /* Center horizontally in the flex column */
+}
+
+.surge .spend-bp-button:hover {
+  border-color: #999;
+  background: #e0e0e0;
+}
+
+.surge .spend-bp-button[disabled] {
+  background: #eee;
+  color: #bbb;
+  border-color: #e0e0e0;
+  pointer-events: none; /* Make it unclickable */
+  cursor: not-allowed;
+}
+
+.surge .buy-points-display {
+  text-align: center;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 8px;
 }

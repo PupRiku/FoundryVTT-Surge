@@ -124,6 +124,10 @@
 
     {{! Main Tab Content }}
     <div class='tab main' data-group='primary' data-tab='main'>
+      {{! Buy Points Display }}
+          <div class="buy-points-display">
+            <h3>Buy Points: <span>{{systemData.buyPoints.value}}</span></h3>
+          </div>
       <div class='main-tab-columns'>
 
         {{! === Attributes Column (Left) === }}
@@ -138,6 +142,8 @@
                   data-attribute='{{key}}'
                   title='Click to roll {{attribute.label}}'
                 >{{attribute.label}}</label>
+        
+                {{!-- The input is now a direct child --}}
                 <input
                   class='attribute-block-value'
                   type='number'
@@ -145,13 +151,15 @@
                   value='{{attribute.value}}'
                   data-dtype='Number'
                 />
-                {{!-- Spend BP Button --}}
-                <a
-                  class="spend-bp-button"
-                  data-stat-type="attribute"
-                  data-stat-key="{{key}}"
-                  title="Spend BP to Increase"
-                  {{#unless attribute.isAffordable}}disabled{{/unless}}>
+        
+                {{!-- The button is now a direct child --}}
+                <a 
+                  class="spend-bp-button" 
+                  data-stat-type="attribute" 
+                  data-stat-key="{{key}}" 
+                  title="Spend BP to Increase" 
+                  {{#unless attribute.isAffordable}}disabled{{/unless}}
+                >
                   + ({{attribute.cost}} BP)
                 </a>
               </div>
@@ -162,10 +170,7 @@
 
         {{! === Skills Column (Right) === }}
         <div class='skills-column'>
-          {{! Buy Points Display }}
-          <div class="buy-points-display">
-            <h3>Buy Points: <span>{{systemData.buyPoints.value}}</span></h3>
-          </div>
+          
           <h2>Skills</h2>
           <div class='skills-list flexcol'>
             {{#each systemData.skills as |skill key|}}
