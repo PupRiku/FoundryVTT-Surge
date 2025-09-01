@@ -146,7 +146,14 @@
                   data-dtype='Number'
                 />
                 {{!-- Spend BP Button --}}
-                <a class="spend-bp-button" data-stat-type="attribute" data-stat-key="{{key}}" title="Spend BP to Increase"><i class="fas fa-plus"></i></a>
+                <a
+                  class="spend-bp-button"
+                  data-stat-type="attribute"
+                  data-stat-key="{{key}}"
+                  title="Spend BP to Increase"
+                  {{#unless attribute.isAffordable}}disabled{{/unless}}>
+                  + ({{attribute.cost}} BP)
+                </a>
               </div>
             {{/each}}
           </div>
@@ -182,7 +189,14 @@
                 />
                 
                 {{!-- Spend BP Button --}}
-                <a class="spend-bp-button" data-stat-type="skill" data-stat-key="{{key}}" title="Spend BP to Increase"><i class="fas fa-plus"></i></a>
+                <a
+                  class="spend-bp-button"
+                  data-stat-type="skill"
+                  data-stat-key="{{key}}"
+                  title="Spend BP to Increase"
+                  {{#unless skill.isAffordable}}disabled{{/unless}}>
+                  + ({{skill.cost}} BP)
+                </a>
               </div>
             {{/each}}
           </div>

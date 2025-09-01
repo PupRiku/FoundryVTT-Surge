@@ -1423,6 +1423,24 @@ export class SurgeCharacterSheet extends ActorSheet {
     context.hpStatusLabel = hpStatusLabel;
     context.deathSaveButtonDisabled = deathSaveButtonDisabled;
 
+    // --- Calculate BP Costs & Affordability for UI ---
+    const currentBp = context.systemData.buyPoints.value || 0;
+
+    // Attributes
+    for (const attr of Object.values(context.systemData.attributes)) {
+      attr.cost = 6; // Flat cost
+      attr.isAffordable = currentBp >= attr.cost && attr.value < 20;
+    }
+
+    // Skills
+    for (const skill of Object.values(context.systemData.skills)) {
+      const nextLevel = skill.value + 1;
+      // Get cost from the static table we defined earlier
+      const cost = SurgeCharacterSheet.SKILL_COST_TABLE[nextLevel] || 999;
+      skill.cost = cost;
+      skill.isAffordable = currentBp >= skill.cost && skill.value < 20;
+    }
+
     console.log('SURGE! | Character Sheet Data Context:', context);
     return context;
   }
