@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.11.01] - 2025-08-31
+
+### 🔧 Maintenance
+
+- Fix versioning
+
 ## [0.11.0] - 2025-08-31
 
 ### ✨ Features

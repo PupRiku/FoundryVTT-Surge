@@ -17,15 +17,15 @@ This system is currently **under active development** (pre-release) but now incl
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field... paste the following URL for the **v0.11.0** release:
+4.  In the "Manifest URL" field... paste the following URL for the **v0.11.01** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/Found-VTT-Surge/v0.11.0/system.json
+    https://raw.githubusercontent.com/PupRiku/Found-VTT-Surge/v0.11.01/system.json
     ```
 5.  Click "Install".
 
 Foundry will download and install the system. You can then create a new world using the SURGE! system.
 
-## Current Features (as of v0.9.0)
+## Current Features (as of v0.11.01)
 
 - **Basic System Structure:** `system.json` manifest, `template.json` data models (Character, various Item types). Basic CSS styling. Includes Macro Compendium pack.
 - **Character Sheet:**
