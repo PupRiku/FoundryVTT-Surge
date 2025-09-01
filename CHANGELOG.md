@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.11.0] - 2025-08-31
+
+### ✨ Features
+
+- Implemented the **Buy Point Leveling System** for character advancement.
+- Added a "Level Up" button to the Actor Sheet header, which increments the character's level and awards Buy Points (BP).
+- BP awarded per level is calculated as `8 + floor(INT Level / 2)`, accounting for the "Learning" rule.
+- Added a "Buy Points" display to the Actor Sheet's Main tab, centered above the Attributes and Skills columns.
+- Added `+ (# BP)` buttons next to each Attribute and Skill to allow players to spend BP.
+- Buttons display the correct cost for the next level (flat 6 BP for Attributes, variable cost for Skills based on total skill level).
+- Buttons are automatically disabled if the character has insufficient BP or the stat is at the maximum level (20).
+- Attribute and Skill scores on the sheet are now read-only, making the BP system the primary method for increasing stats.
+
+### 🐛 Bug Fixes
+
+- Fixed a bug in the `template.json` for `buyPoints` that caused the display to show `[object Object]`.
+- Resolved an error in the `_onSpendBP` handler that incorrectly calculated skill costs by ensuring it used the character's _total_ skill level (including trait bonuses).
+- Corrected several CSS layout issues with the new buttons and displays on the Actor Sheet, including the height of the attribute "Spend BP" button.
+
+### 🔧 Maintenance
+
+- Added `buyPoints` data structure to the character actor model in `template.json`.
+- Added a `SKILL_COST_TABLE` constant to `SurgeCharacterSheet` for cost lookups.
+- Created `_onCharacterLevelUp` and `_onSpendBP` handler methods to manage leveling and spending.
+- Updated `ActorSheet.getData` to calculate and pass stat costs and affordability to the template.
+- Updated `actor-sheet.hbs` with the new UI elements.
+
+## [0.10.2] - 2025-08-31
+
+### 🐛 Bug Fixes
+
+- Fixed an order-of-operations bug in `ActorSheet.getData` that caused the "Menace" passive stat to appear blank after applying a species to a new character. All passives now display their correct starting values immediately.
+- Resolved a `Roll#evaluate` deprecation warning that occurred during the starting HP roll in the character creation (`_onDropItem`) script.
+
 ## [0.10.1] - 2025-08-31
 
 ### ✨ Features

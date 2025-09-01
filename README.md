@@ -17,9 +17,9 @@ This system is currently **under active development** (pre-release) but now incl
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field at the bottom, paste the following URL for the **v0.10.1** release:
+4.  In the "Manifest URL" field... paste the following URL for the **v0.11.0** release:
     ```
-    [https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.10.1/system.json](https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.10.1/system.json)
+    https://raw.githubusercontent.com/PupRiku/Found-VTT-Surge/v0.11.0/system.json
     ```
 5.  Click "Install".
 
@@ -40,7 +40,7 @@ Foundry will download and install the system. You can then create a new world us
   - Common fields (Name, Image, Description, Qty, Wt, Price).
   - Type-specific fields for Weapons, Armor, & Shields.
   - Fields & layout for "spell", **"species"**, and **"trait"** item types.
-- **Character Creation (v0.10.0):**
+- **Character Creation (v0.10.2):**
   - Automated character setup via **drag-and-drop of a `Species` item** from the compendium onto the actor sheet.
   - When a species is applied, the system automatically:
     - Applies attribute bonuses.
@@ -51,6 +51,12 @@ Foundry will download and install the system. You can then create a new world us
   - Blank character sheets now display "?" for key stats, which populate after a species is added.
   - Created Compendium packs for Species and Traits with initial Ponturi data.
   - **(v0.10.1)** Added special functionality for the Djinn species to allow for their daily 'Chosen Trait' to be changed via a button on the actor sheet.
+- **Character Advancement (v0.11.0):**
+  - Implemented the Buy Point Level System.
+  - Characters gain Buy Points (BP) upon leveling up (8 + bonus from Intelligence).
+  - Players can spend BP via buttons on the actor sheet to increase Attribute and Skill levels.
+  - Costs are automatically calculated (flat for attributes, variable for skills based on total level).
+  - UI provides feedback on BP cost and disables buttons when unaffordable or at max level.
 - **Dice Rolling & Mechanics:**
   - Core SURGE! roll mechanic (`Xd6x6+Y` lookup + `x6` SURGING) via `_performRoll`.
   - Attribute/Skill checks rollable from Actor Sheet.
@@ -87,7 +93,6 @@ Foundry will download and install the system. You can then create a new world us
 
 - **Refine Condition Mechanics:** Implement specific Condition Actions (Break Free, Patch Up, Shake Off Stun, Stand Up).
 - **Refine Spellcasting System:** Implement Focus mechanic (concentration checks); Handle multi-turn casting times & action costs; Implement Area of Effect targeting/templates; Refine spell damage/healing application; Implement Mending school healing interaction with Unconscious.
-- **Leveling Up:** Implement the mechanics for advancing a character's level.
 - **Item Sheet Enhancements:** UI for editing array data (DR, Penalties); Layouts for remaining item types (Gear, Tool, Medicine, Antidotes, Brace, etc.).
 - **Combat Options:** Unarmed Strike, Grapple, Shove, Shield HP/Blocking, Dodge/Counter, Kevlar mechanics.
 - **NPC Sheet:** Design data model and sheet.
