@@ -17,6 +17,10 @@
         "allies_enemies": "",
         "notes": ""
       },
+      "buyPoints": {
+        "value": 0,
+        "total": 0
+      },
       "attributes": {
         "str": { "value": 1, "label": "Strength" },
         "dex": { "value": 1, "label": "Dexterity" },

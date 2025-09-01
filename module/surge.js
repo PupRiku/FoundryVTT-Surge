@@ -1047,6 +1047,27 @@ console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loa
  * @extends {ActorSheet}
  */
 export class SurgeCharacterSheet extends ActorSheet {
+  static SKILL_COST_TABLE = {
+    2: 1,
+    3: 1,
+    4: 2,
+    5: 2,
+    6: 2,
+    7: 3,
+    8: 3,
+    9: 3,
+    10: 4,
+    11: 4,
+    12: 4,
+    13: 5,
+    14: 5,
+    15: 5,
+    16: 5,
+    17: 5,
+    18: 5,
+    19: 5,
+    20: 5,
+  };
   /**
    * Define default options for the character sheet.
    * @returns {object}
@@ -1466,6 +1487,11 @@ export class SurgeCharacterSheet extends ActorSheet {
       .find('.effect-control[data-action="delete"]')
       .click(this._onEffectDelete.bind(this));
 
+    // Character Level Up Button
+    html.find('.level-up-button').click(this._onCharacterLevelUp.bind(this));
+    // Spend BP Buttons
+    html.find('.spend-bp-button').click(this._onSpendBP.bind(this));
+
     // console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
 
@@ -1714,6 +1740,95 @@ export class SurgeCharacterSheet extends ActorSheet {
     } else {
       console.log('SURGE | Djinn trait selection cancelled.');
     }
+  }
+
+  /**
+   * Handle the GM clicking the "Level Up" button.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onCharacterLevelUp(event) {
+    event.preventDefault();
+
+    const actor = this.actor;
+    const currentLevel = actor.system.details.level.value;
+    const newLevel = currentLevel + 1;
+
+    // Calculate BP to award: 8 + (INT Level / 2, rounded down)
+    const intLevel = actor.system.attributes.int.value;
+    const bpAwarded = 8 + Math.floor(intLevel / 2);
+
+    const newBpValue = (actor.system.buyPoints.value || 0) + bpAwarded;
+    const newBpTotal = (actor.system.buyPoints.total || 0) + bpAwarded;
+
+    // Update actor data
+    await actor.update({
+      'system.details.level.value': newLevel,
+      'system.buyPoints.value': newBpValue,
+      'system.buyPoints.total': newBpTotal,
+    });
+
+    // Send chat message
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: actor }),
+      content: `${actor.name} has reached Level ${newLevel} and gains ${bpAwarded} Buy Points!`,
+    });
+  }
+
+  /**
+   * Handle a player spending Buy Points to increase a stat.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onSpendBP(event) {
+    event.preventDefault();
+    const element = event.currentTarget;
+    const statType = element.dataset.statType; // "attribute" or "skill"
+    const statKey = element.dataset.statKey; // "str", "dex", "culture", etc.
+
+    const actor = this.actor;
+    const currentBp = actor.system.buyPoints.value || 0;
+
+    let cost = 0;
+    let currentLevel = 0;
+    let newLevel = 0;
+    let statPath = '';
+    let statLabel = '';
+
+    if (statType === 'attribute') {
+      cost = 6; // Flat cost for attributes
+      currentLevel = actor.system.attributes[statKey].value;
+      statPath = `system.attributes.${statKey}.value`;
+      statLabel = actor.system.attributes[statKey].label;
+    } else if (statType === 'skill') {
+      currentLevel = actor.system.skills[statKey].value;
+      // Cost is for the *next* level
+      cost = SurgeCharacterSheet.SKILL_COST_TABLE[currentLevel + 1] || 999; // Use 999 for levels > 20
+      statPath = `system.skills.${statKey}.value`;
+      statLabel = actor.system.skills[statKey].label;
+    } else {
+      return; // Should not happen
+    }
+
+    newLevel = currentLevel + 1;
+    if (newLevel > 20) {
+      return ui.notifications.warn('Cannot raise a stat above Level 20.');
+    }
+    if (currentBp < cost) {
+      return ui.notifications.warn(`Not enough Buy Points! Needs ${cost} BP.`);
+    }
+
+    // Deduct BP and increase stat
+    await actor.update({
+      'system.buyPoints.value': currentBp - cost,
+      [statPath]: newLevel, // Use computed property name to update correct stat
+    });
+
+    // Send chat message
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: actor }),
+      content: `${actor.name} spent ${cost} BP to increase ${statLabel} to Level ${newLevel}.`,
+    });
   }
 
   /**

@@ -39,6 +39,7 @@
       <div class='level-block'>
         <label class='level-label'>{{systemData.details.level.label}}</label>
         <span class='level-value'>{{systemData.details.level.value}}</span>
+        <a class="level-up-button" title="Increase Character Level"><i class="fas fa-plus-circle"></i></a>
       </div>
     </div>
     {{! End header-top-row }}
@@ -126,6 +127,12 @@
         {{! === Attributes Column (Left) === }}
         <div class='attributes-column'>
           <h2>Attributes</h2>
+
+          {{! Buy Points Display }}
+          <div class="buy-points-display">
+            <h3>Buy Points: <span>{{systemData.buyPoints.value}}</span></h3>
+          </div>
+
           <div class='attributes-block-list'>
             {{#each systemData.attributes as |attribute key|}}
               <div class='attribute-block' data-attribute='{{key}}'>
@@ -141,6 +148,8 @@
                   value='{{attribute.value}}'
                   data-dtype='Number'
                 />
+                {{!-- Spend BP Button --}}
+                <a class="spend-bp-button" data-stat-type="attribute" data-stat-key="{{key}}" title="Spend BP to Increase"><i class="fas fa-plus"></i></a>
               </div>
             {{/each}}
           </div>
@@ -170,6 +179,9 @@
                   data-dtype='Number'
                   title="Base Value"
                 />
+                
+                {{!-- Spend BP Button --}}
+                <a class="spend-bp-button" data-stat-type="skill" data-stat-key="{{key}}" title="Spend BP to Increase"><i class="fas fa-plus"></i></a>
               </div>
             {{/each}}
           </div>
