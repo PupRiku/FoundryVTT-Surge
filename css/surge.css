@@ -407,13 +407,6 @@
   text-shadow: 0 0 3px #99f; /* Subtle blue glow */
 }
 
-/* Styling Input Fields and Values */
-.surge .skill-value {
-  flex: 0 0 40px; /* Smaller width */
-  font-size: 0.9em;
-  background-color: #f8f8f8;
-}
-
 .surge .skill-total {
   flex: 0 0 40px; /* Give it a fixed width */
   font-size: 1.2em; /* Make it stand out */

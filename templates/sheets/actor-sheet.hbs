@@ -143,16 +143,8 @@
                   title='Click to roll {{attribute.label}}'
                 >{{attribute.label}}</label>
         
-                {{!-- The input is now a direct child --}}
-                <input
-                  class='attribute-block-value'
-                  type='number'
-                  name='system.attributes.{{key}}.value'
-                  value='{{attribute.value}}'
-                  data-dtype='Number'
-                />
+                <span class='attribute-block-value'>{{attribute.value}}</span>
         
-                {{!-- The button is now a direct child --}}
                 <a 
                   class="spend-bp-button" 
                   data-stat-type="attribute" 
@@ -183,15 +175,6 @@
 
                 {{!-- Display the calculated total skill value --}}
                 <span class="skill-total" title="{{skill.tooltip}}">{{skill.total}}</span>
-
-                <input
-                  class='skill-value'
-                  type='number'
-                  name='system.skills.{{key}}.value'
-                  value='{{skill.value}}'
-                  data-dtype='Number'
-                  title="Base Value"
-                />
                 
                 {{!-- Spend BP Button --}}
                 <a

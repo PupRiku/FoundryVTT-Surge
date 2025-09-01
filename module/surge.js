@@ -1434,11 +1434,11 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // Skills
     for (const skill of Object.values(context.systemData.skills)) {
-      const nextLevel = skill.value + 1;
+      const nextLevel = skill.total + 1;
       // Get cost from the static table we defined earlier
       const cost = SurgeCharacterSheet.SKILL_COST_TABLE[nextLevel] || 999;
       skill.cost = cost;
-      skill.isAffordable = currentBp >= skill.cost && skill.value < 20;
+      skill.isAffordable = currentBp >= skill.cost && skill.total < 20;
     }
 
     console.log('SURGE! | Character Sheet Data Context:', context);
@@ -1803,50 +1803,86 @@ export class SurgeCharacterSheet extends ActorSheet {
     const element = event.currentTarget;
     const statType = element.dataset.statType; // "attribute" or "skill"
     const statKey = element.dataset.statKey; // "str", "dex", "culture", etc.
-
     const actor = this.actor;
     const currentBp = actor.system.buyPoints.value || 0;
 
-    let cost = 0;
-    let currentLevel = 0;
-    let newLevel = 0;
-    let statPath = '';
-    let statLabel = '';
-
     if (statType === 'attribute') {
-      cost = 6; // Flat cost for attributes
-      currentLevel = actor.system.attributes[statKey].value;
-      statPath = `system.attributes.${statKey}.value`;
-      statLabel = actor.system.attributes[statKey].label;
+      const cost = 6; // Flat cost for attributes
+      const currentLevel = actor.system.attributes[statKey].value;
+      const newLevel = currentLevel + 1;
+
+      if (newLevel > 20) {
+        return ui.notifications.warn(
+          'Cannot raise an attribute above Level 20.'
+        );
+      }
+      if (currentBp < cost) {
+        return ui.notifications.warn(
+          `Not enough Buy Points! Needs ${cost} BP.`
+        );
+      }
+
+      // Deduct BP and increase stat
+      const statPath = `system.attributes.${statKey}.value`;
+      const statLabel = actor.system.attributes[statKey].label;
+      await actor.update({
+        'system.buyPoints.value': currentBp - cost,
+        [statPath]: newLevel,
+      });
+
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: actor }),
+        content: `${actor.name} spent ${cost} BP to increase ${statLabel} to Level ${newLevel}.`,
+      });
     } else if (statType === 'skill') {
-      currentLevel = actor.system.skills[statKey].value;
-      // Cost is for the *next* level
-      cost = SurgeCharacterSheet.SKILL_COST_TABLE[currentLevel + 1] || 999; // Use 999 for levels > 20
-      statPath = `system.skills.${statKey}.value`;
-      statLabel = actor.system.skills[statKey].label;
-    } else {
-      return; // Should not happen
-    }
+      const baseLevel = actor.system.skills[statKey].value;
+      const statLabel = actor.system.skills[statKey].label;
 
-    newLevel = currentLevel + 1;
-    if (newLevel > 20) {
-      return ui.notifications.warn('Cannot raise a stat above Level 20.');
-    }
-    if (currentBp < cost) {
-      return ui.notifications.warn(`Not enough Buy Points! Needs ${cost} BP.`);
-    }
+      // Recalculate total skill level to determine cost
+      let skillBonus = 0;
+      const traitItems = this.actor.items.filter(
+        (item) => item.type === 'trait'
+      );
+      for (const trait of traitItems) {
+        if (trait.system.skillBonus?.skill === statKey) {
+          skillBonus += trait.system.skillBonus?.value || 0;
+        }
+      }
+      const currentTotalLevel = baseLevel + skillBonus;
 
-    // Deduct BP and increase stat
-    await actor.update({
-      'system.buyPoints.value': currentBp - cost,
-      [statPath]: newLevel, // Use computed property name to update correct stat
-    });
+      // Check level cap using the TOTAL level
+      if (currentTotalLevel >= 20) {
+        return ui.notifications.warn(
+          `${statLabel} is already at the maximum total level of 20.`
+        );
+      }
 
-    // Send chat message
-    ChatMessage.create({
-      speaker: ChatMessage.getSpeaker({ actor: actor }),
-      content: `${actor.name} spent ${cost} BP to increase ${statLabel} to Level ${newLevel}.`,
-    });
+      // Cost is based on the NEXT total level
+      const nextTotalLevel = currentTotalLevel + 1;
+      const cost = SurgeCharacterSheet.SKILL_COST_TABLE[nextTotalLevel] || 999;
+
+      if (currentBp < cost) {
+        return ui.notifications.warn(
+          `Not enough Buy Points to raise ${statLabel}! Needs ${cost} BP.`
+        );
+      }
+
+      // If affordable, we increase the BASE level by 1
+      const newBaseLevel = baseLevel + 1;
+      const statPath = `system.skills.${statKey}.value`;
+
+      // Deduct BP and increase stat's BASE value
+      await actor.update({
+        'system.buyPoints.value': currentBp - cost,
+        [statPath]: newBaseLevel,
+      });
+
+      // Send chat message showing the NEW total level
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: actor }),
+        content: `${actor.name} spent ${cost} BP to increase ${statLabel} to Level ${nextTotalLevel}.`,
+      });
+    }
   }
 
   /**
