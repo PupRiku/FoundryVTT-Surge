@@ -88,11 +88,9 @@
 
 .surge .sheet-header .level-block {
   flex: 0 0 auto; /* Keep fixed size */
-  /* margin-left: auto; REMOVED */
-  /* align-self: flex-end; REMOVED */
   margin: 0; /* Reset margins, rely on parent gap */
   width: 90px;
-  height: 90px; /* Re-adjust height if needed for alignment */
+  height: 100px; /* Re-adjust height if needed for alignment */
   background-color: #f0f4f8;
   border: 1px solid #c0c8d0;
   border-radius: 15px;
@@ -103,6 +101,7 @@
   padding: 5px;
   text-align: center;
   box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.15);
+  padding-top: 8px;
 }
 
 .surge .sheet-header .level-block .level-label {
@@ -131,6 +130,13 @@
   border: none;
   background: none;
   padding: 0;
+}
+
+.surge .sheet-header .level-up-button {
+  margin-top: 4px;
+  font-size: 0.8em;
+  padding: 2px 5px;
+  line-height: 1.2;
 }
 
 .surge .header-passives-grid {
