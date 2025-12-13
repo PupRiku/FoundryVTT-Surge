@@ -19,7 +19,7 @@ This system is currently **under active development** (pre-release) but now incl
 3.  Click the "Install System" button.
 4.  In the "Manifest URL" field... paste the following URL for the **v0.11.01** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/Found-VTT-Surge/v0.11.01/system.json
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.11.01/system.json
     ```
 5.  Click "Install".
 
