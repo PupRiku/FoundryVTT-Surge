@@ -12,14 +12,14 @@ This system is currently **under active development** (pre-release) but now incl
 
 ## Installation
 
-**Important:** This system is currently in a pre-release state (v0.10.1). Features may be incomplete or change. Use with caution!
+**Important:** This system is currently in a pre-release state (v0.11.02). Features may be incomplete or change. Use with caution!
 
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field... paste the following URL for the **v0.11.01** release:
+4.  In the "Manifest URL" field... paste the following URL for the **v0.11.02** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.11.01/system.json
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.11.02/system.json
     ```
 5.  Click "Install".
 
