@@ -1412,14 +1412,16 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // --- Calculate BP Costs & Affordability for UI ---
     const currentBp = context.systemData.buyPoints.value || 0;
+
+    // Attributes
     for (const attr of Object.values(context.systemData.attributes)) {
-      attr.cost = 6;
+      attr.cost = 4;
       attr.isAffordable = currentBp >= attr.cost && attr.value < 20;
     }
+
+    // Skills (Cost is now flat 3)
     for (const skill of Object.values(context.systemData.skills)) {
-      const nextLevel = skill.total + 1;
-      const cost = SurgeCharacterSheet.SKILL_COST_TABLE[nextLevel] || 999;
-      skill.cost = cost;
+      skill.cost = 3;
       skill.isAffordable = currentBp >= skill.cost && skill.total < 20;
     }
 
@@ -1752,9 +1754,9 @@ export class SurgeCharacterSheet extends ActorSheet {
     const currentLevel = actor.system.details.level.value;
     const newLevel = currentLevel + 1;
 
-    // Calculate BP to award: 8 + (INT Level / 2, rounded down)
+    // Calculate BP to award: 7 + (INT Level / 2, rounded down)
     const intLevel = actor.system.attributes.int.value;
-    const bpAwarded = 8 + Math.floor(intLevel / 2);
+    const bpAwarded = 7 + Math.floor(intLevel / 2);
 
     const newBpValue = (actor.system.buyPoints.value || 0) + bpAwarded;
     const newBpTotal = (actor.system.buyPoints.total || 0) + bpAwarded;
@@ -1787,7 +1789,7 @@ export class SurgeCharacterSheet extends ActorSheet {
     const currentBp = actor.system.buyPoints.value || 0;
 
     if (statType === 'attribute') {
-      const cost = 6; // Flat cost for attributes
+      const cost = 4; // Flat cost for attributes
       const currentLevel = actor.system.attributes[statKey].value;
       const newLevel = currentLevel + 1;
 
@@ -1818,7 +1820,8 @@ export class SurgeCharacterSheet extends ActorSheet {
       const baseLevel = actor.system.skills[statKey].value;
       const statLabel = actor.system.skills[statKey].label;
 
-      // Recalculate total skill level to determine cost
+      // We still need to calculate total level to check the cap (20),
+      // but the COST is now always 3.
       let skillBonus = 0;
       const traitItems = this.actor.items.filter(
         (item) => item.type === 'trait'
@@ -1837,9 +1840,7 @@ export class SurgeCharacterSheet extends ActorSheet {
         );
       }
 
-      // Cost is based on the NEXT total level
-      const nextTotalLevel = currentTotalLevel + 1;
-      const cost = SurgeCharacterSheet.SKILL_COST_TABLE[nextTotalLevel] || 999;
+      const cost = 3;
 
       if (currentBp < cost) {
         return ui.notifications.warn(
