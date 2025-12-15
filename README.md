@@ -12,20 +12,20 @@ This system is currently **under active development** (pre-release) but now incl
 
 ## Installation
 
-**Important:** This system is currently in a pre-release state (v0.11.02). Features may be incomplete or change. Use with caution!
+**Important:** This system is currently in a pre-release state (v0.11.1). Features may be incomplete or change. Use with caution!
 
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field... paste the following URL for the **v0.11.02** release:
+4.  In the "Manifest URL" field... paste the following URL for the **v0.11.1** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.11.02/system.json
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.11.1/system.json
     ```
 5.  Click "Install".
 
 Foundry will download and install the system. You can then create a new world using the SURGE! system.
 
-## Current Features (as of v0.11.01)
+## Current Features (as of v0.11.1)
 
 - **Basic System Structure:** `system.json` manifest, `template.json` data models (Character, various Item types). Basic CSS styling. Includes Macro Compendium pack.
 - **Character Sheet:**
@@ -51,11 +51,11 @@ Foundry will download and install the system. You can then create a new world us
   - Blank character sheets now display "?" for key stats, which populate after a species is added.
   - Created Compendium packs for Species and Traits with initial Ponturi data.
   - **(v0.10.1)** Added special functionality for the Djinn species to allow for their daily 'Chosen Trait' to be changed via a button on the actor sheet.
-- **Character Advancement (v0.11.0):**
-  - Implemented the Buy Point Level System.
-  - Characters gain Buy Points (BP) upon leveling up (8 + bonus from Intelligence).
+- **Character Advancement (v0.11.0 / v0.11.1):**
+  - Implemented the Buy Point Level System (Updated to simplified rules in v0.11.1).
+  - Characters gain **7 Buy Points (BP)** upon leveling up (plus Intelligence bonus).
   - Players can spend BP via buttons on the actor sheet to increase Attribute and Skill levels.
-  - Costs are automatically calculated (flat for attributes, variable for skills based on total level).
+  - Costs are automatically calculated using the new flat rates (**4 BP for Attributes, 3 BP for Skills**).
   - UI provides feedback on BP cost and disables buttons when unaffordable or at max level.
 - **Dice Rolling & Mechanics:**
   - Core SURGE! roll mechanic (`Xd6x6+Y` lookup + `x6` SURGING) via `_performRoll`.

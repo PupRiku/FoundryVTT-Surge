@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.11.1] - 2025-12-15
+
+### ⚠ Rule Changes
+
+- **Updated Leveling Rules:** The Buy Point (BP) economy has been simplified to match the latest SURGE! ruleset.
+  - **BP Awarded:** Reduced from 8 to **7** per level (plus Intelligence bonus).
+  - **Attribute Cost:** Reduced from 6 to a flat **4 BP**.
+  - **Skill Cost:** Changed from variable scaling (1-5) to a flat **3 BP** regardless of current level.
+
+### ⚙ System Compatibility
+
+- **Foundry V13:** Verified system compatibility with Foundry VTT v13.351.
+
+### 🔧 Code Cleanup
+
+- Removed the deprecated `SKILL_COST_TABLE` lookup logic in favor of the new flat-cost constants.
+
 ## [0.11.01] - 2025-08-31
 
 ### 🔧 Maintenance
