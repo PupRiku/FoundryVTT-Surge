@@ -1,8 +1,8 @@
 # SURGE! System for Foundry VTT
 
 [![Latest Release](https://img.shields.io/github/v/release/PupRiku/FoundryVTT-Surge?include_prereleases&label=Latest%20Release)](https://github.com/PupRiku/FoundryVTT-Surge/releases/latest)
-[![Foundry Compatibility](https://img.shields.io/badge/Foundry%20VTT-v12.331%2B-informational)](https://foundryvtt.com/releases/)
-_Note: Compatibility verified specifically for v12.331 during development. Untested on later versions._
+[![Foundry Compatibility](https://img.shields.io/badge/Foundry%20VTT-v13.351%2B-informational)](https://foundryvtt.com/releases/)
+_Note: Compatibility verified specifically for v13.351 during development._
 
 ## Introduction
 
