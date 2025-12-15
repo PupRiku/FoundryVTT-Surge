@@ -1047,27 +1047,6 @@ console.log('SURGE! | Initializing surge.js'); // Log to confirm the file is loa
  * @extends {ActorSheet}
  */
 export class SurgeCharacterSheet extends ActorSheet {
-  static SKILL_COST_TABLE = {
-    2: 1,
-    3: 1,
-    4: 2,
-    5: 2,
-    6: 2,
-    7: 3,
-    8: 3,
-    9: 3,
-    10: 4,
-    11: 4,
-    12: 4,
-    13: 5,
-    14: 5,
-    15: 5,
-    16: 5,
-    17: 5,
-    18: 5,
-    19: 5,
-    20: 5,
-  };
   /**
    * Define default options for the character sheet.
    * @returns {object}
