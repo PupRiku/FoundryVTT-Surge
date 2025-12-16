@@ -1422,6 +1422,26 @@ export class SurgeCharacterSheet extends ActorSheet {
       });
     }
 
+    // Action: Patch Up (Bleeding)
+    if (this.actor.flags?.surge?.bleeding) {
+      context.conditionActions.push({
+        id: 'patch-up-bleeding',
+        label: 'Patch Up (Bleeding)',
+        cost: '1 Action + Item?', // Hint to player/GM
+        icon: 'fas fa-band-aid',
+      });
+    }
+
+    // Action: Patch Up (Broken)
+    if (this.actor.flags?.surge?.broken) {
+      context.conditionActions.push({
+        id: 'patch-up-broken',
+        label: 'Patch Up (Broken)',
+        cost: '1 Action + Item?',
+        icon: 'fas fa-tools',
+      });
+    }
+
     console.log('SURGE! | Character Sheet Data Context:', context);
     return context;
   }
@@ -3510,19 +3530,14 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     console.log(`SURGE | Processing Condition Action: ${actionId}`);
 
+    // --- Stand Up ---
     if (actionId === 'stand-up') {
-      // 1. Find the Prone effect
-      // We look for the effect that sets the specific flag
       const proneEffect = actor.effects.find(
         (e) =>
           e.changes.some((c) => c.key === 'flags.surge.prone') && !e.disabled
       );
-
       if (proneEffect) {
-        // 2. Delete the effect
         await proneEffect.delete();
-
-        // 3. Send Chat Message
         ChatMessage.create({
           speaker: ChatMessage.getSpeaker({ actor: actor }),
           content: `<strong>${actor.name}</strong> spends 1 Action to stand up, removing the <strong>Prone</strong> condition.`,
@@ -3531,7 +3546,42 @@ export class SurgeCharacterSheet extends ActorSheet {
         ui.notifications.warn('Could not find the Prone effect to remove.');
       }
     }
-    // Future actions (Break Free, Patch Up) will go here as else/if blocks
+
+    // --- Patch Up (Bleeding) ---
+    else if (actionId === 'patch-up-bleeding') {
+      const effect = actor.effects.find(
+        (e) =>
+          e.changes.some((c) => c.key === 'flags.surge.bleeding') && !e.disabled
+      );
+      if (effect) {
+        await effect.delete();
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: actor }),
+          content: `<strong>${actor.name}</strong> spends 1 Action to patch their wounds, removing the <strong>Bleeding</strong> condition.<br><em>(GM: Ensure a Bandage was used if required.)</em>`,
+        });
+      } else {
+        ui.notifications.warn('Could not find the Bleeding effect to remove.');
+      }
+    }
+
+    // --- Patch Up (Broken) ---
+    else if (actionId === 'patch-up-broken') {
+      const effect = actor.effects.find(
+        (e) =>
+          e.changes.some((c) => c.key === 'flags.surge.broken') && !e.disabled
+      );
+      if (effect) {
+        await effect.delete();
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: actor }),
+          content: `<strong>${actor.name}</strong> spends 1 Action to fix their broken gear/bone, removing the <strong>Broken</strong> condition.<br><em>(GM: Ensure a Brace/Tool was used if required.)</em>`,
+        });
+      } else {
+        ui.notifications.warn('Could not find the Broken effect to remove.');
+      }
+    }
+
+    // Future actions (Break Free) will go here as else/if blocks
   }
 
   // Define other event handler methods like _onItemAttack, etc.
