@@ -1287,6 +1287,7 @@ export class SurgeCharacterSheet extends ActorSheet {
       }
     }
     context.speciesAndTraitDisplay = speciesAndTraitDisplay;
+    context.hasSpecies = !!speciesItem;
     context.hasTraitOptions = hasTraitOptions;
 
     const isDjinn = speciesItem?.name === 'Djinn';
@@ -1540,6 +1541,14 @@ export class SurgeCharacterSheet extends ActorSheet {
     html
       .find('.change-species-trait')
       .click(this._onChangeSpeciesTrait.bind(this));
+
+    // Change Species Trait
+    html
+      .find('.change-species-trait')
+      .click(this._onChangeSpeciesTrait.bind(this));
+
+    // Remove Species (New)
+    html.find('.delete-species').click(this._onDeleteSpecies.bind(this));
 
     // console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
@@ -3635,6 +3644,34 @@ export class SurgeCharacterSheet extends ActorSheet {
       const traitDoc = await traitPack.getDocument(chosenId);
       await actor.createEmbeddedDocuments('Item', [traitDoc.toObject()]);
       ui.notifications.info(`Trait changed to: ${traitDoc.name}`);
+    }
+  }
+
+  /**
+   * Deletes the Species item and any associated Trait items.
+   * @private
+   */
+  async _onDeleteSpecies(event) {
+    event.preventDefault();
+    const actor = this.actor;
+
+    // 1. Confirm deletion
+    const confirm = await Dialog.confirm({
+      title: 'Remove Species',
+      content:
+        "<p>Are you sure you want to remove this character's Species? This will delete the Species item and any associated Traits.</p><p><strong>Note:</strong> This does <em>not</em> automatically revert Attribute bonuses applied when the species was added. You may need to manually adjust stats or use the 'Reset Stats' button.</p>",
+      defaultYes: false,
+    });
+    if (!confirm) return;
+
+    // 2. Find items to delete
+    const itemsToDelete = actor.items
+      .filter((i) => i.type === 'species' || i.type === 'trait')
+      .map((i) => i.id);
+
+    if (itemsToDelete.length > 0) {
+      await actor.deleteEmbeddedDocuments('Item', itemsToDelete);
+      ui.notifications.info('Species and Traits removed.');
     }
   }
 

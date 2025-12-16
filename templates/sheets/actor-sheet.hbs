@@ -27,11 +27,19 @@
         {{! Old header-details div removed/empty }}
         <div class="flexrow" style="align-items: center;">
           <h3 class="species-trait">{{speciesAndTraitDisplay}}</h3>
+
           {{! GENERIC TRAIT BUTTON }}
           {{#if hasTraitOptions}}
             <button type="button" class="change-species-trait" title="Change Species Trait">
               <i class="fas fa-sync-alt"></i> Change
             </button>
+          {{/if}}
+
+          {{! REMOVE SPECIES BUTTON }}
+          {{#if (and isEditMode hasSpecies)}}
+            <a class="delete-species" title="Remove Species" style="margin-left: 8px; color: #a00; cursor: pointer;">
+                <i class="fas fa-trash"></i>
+            </a>
           {{/if}}
 
           {{! EDIT MODE TOGGLE }}
