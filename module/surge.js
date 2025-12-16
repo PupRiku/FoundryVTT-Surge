@@ -1474,7 +1474,6 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // --- Header Listeners ---
     html.find('.death-save-button').click(this._onMakeDeathSave.bind(this));
-    html.find('.change-djinn-trait').click(this._onChangeDjinnTrait.bind(this));
 
     // --- Roll Listeners ---
     html
@@ -1689,134 +1688,6 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // If the dropped item was NOT a species, fall back to the default sheet behavior
     return super._onDropItem(event, data);
-  }
-
-  /**
-   * Toggles the "Edit Mode" flag on the actor.
-   * @private
-   */
-  async _onToggleEditMode(event) {
-    event.preventDefault();
-    const currentMode = this.actor.flags?.surge?.editMode || false;
-    await this.actor.update({ 'flags.surge.editMode': !currentMode });
-  }
-
-  /**
-   * Resets Attributes and Skills to base levels and refunds BP.
-   * @private
-   */
-  async _onResetStats(event) {
-    event.preventDefault();
-
-    const confirm = await Dialog.confirm({
-      title: 'Reset Stats & Refund BP',
-      content:
-        '<p>Are you sure? This will reset all Attributes and Skills to Level 1 (plus species bonuses) and refund the Buy Points to your pool.</p>',
-      defaultYes: false,
-    });
-    if (!confirm) return;
-
-    const actor = this.actor;
-    const updates = {};
-    let bpRefund = 0;
-
-    // 1. Reset Attributes
-    // We need to know the species bonus to reset correctly
-    const speciesItem = actor.items.find((i) => i.type === 'species');
-    const speciesBonusAttr = speciesItem?.system?.attributeBonus?.attribute;
-    const speciesBonusValue = speciesItem?.system?.attributeBonus?.value || 0;
-
-    for (const [key, attr] of Object.entries(actor.system.attributes)) {
-      let baseValue = 1;
-      if (key === speciesBonusAttr) baseValue += speciesBonusValue;
-
-      if (attr.value > baseValue) {
-        const diff = attr.value - baseValue;
-        bpRefund += diff * 4; // Flat cost 4 per level
-        updates[`system.attributes.${key}.value`] = baseValue;
-      }
-    }
-
-    // 2. Reset Skills
-    for (const [key, skill] of Object.entries(actor.system.skills)) {
-      const baseValue = 1;
-      if (skill.value > baseValue) {
-        const diff = skill.value - baseValue;
-        bpRefund += diff * 3; // Flat cost 3 per level
-        updates[`system.skills.${key}.value`] = baseValue;
-      }
-    }
-
-    // 3. Update BP
-    const currentBp = actor.system.buyPoints.value || 0;
-    updates['system.buyPoints.value'] = currentBp + bpRefund;
-
-    await actor.update(updates);
-    ui.notifications.info(`Stats reset. Refunded ${bpRefund} BP.`);
-  }
-
-  /**
-   * Generic handler to swap the chosen trait for any species.
-   * Replaces _onChangeDjinnTrait.
-   * @private
-   */
-  async _onChangeSpeciesTrait(event) {
-    event.preventDefault();
-    const actor = this.actor;
-
-    const speciesItem = actor.items.find((i) => i.type === 'species');
-    if (!speciesItem || !speciesItem.system.traitOptions) return;
-
-    const traitOptions = speciesItem.system.traitOptions;
-
-    // 1. Remove current trait(s) belonging to this species options
-    const traitOptionNames = traitOptions.map((t) => t.name);
-    const currentTraits = actor.items.filter(
-      (i) => i.type === 'trait' && traitOptionNames.includes(i.name)
-    );
-    if (currentTraits.length > 0) {
-      const idsToDelete = currentTraits.map((t) => t.id);
-      await actor.deleteEmbeddedDocuments('Item', idsToDelete);
-    }
-
-    // 2. Prompt for new trait
-    const traitPack = game.packs.get('surge.surge-traits');
-    if (!traitPack)
-      return ui.notifications.error(
-        "Could not find 'SURGE! Traits' compendium."
-      );
-    await traitPack.getIndex();
-
-    let traitChoices = {};
-    for (const option of traitOptions) {
-      const entry = traitPack.index.find((e) => e.name === option.name);
-      if (entry) traitChoices[entry._id] = option.name;
-    }
-
-    const chosenId = await new Promise((resolve) => {
-      new Dialog({
-        title: `Change ${speciesItem.name} Trait`,
-        content: `<div class="form-group"><label>Choose Trait:</label> <select name="choice">${Object.entries(
-          traitChoices
-        )
-          .map(([id, name]) => `<option value="${id}">${name}</option>`)
-          .join('')}</select></div>`,
-        buttons: {
-          ok: {
-            label: 'Select',
-            callback: (html) => resolve(html.find('select').val()),
-          },
-        },
-        default: 'ok',
-        close: () => resolve(null),
-      }).render(true);
-    });
-
-    if (chosenId) {
-      const traitDoc = await traitPack.getDocument(chosenId);
-      await actor.createEmbeddedDocuments('Item', [traitDoc.toObject()]);
-      ui.notifications.info(`Trait changed to: ${traitDoc.name}`);
-    }
   }
 
   /**
@@ -3637,6 +3508,134 @@ export class SurgeCharacterSheet extends ActorSheet {
     }
 
     // Future actions (Break Free) will go here as else/if blocks
+  }
+
+  /**
+   * Toggles the "Edit Mode" flag on the actor.
+   * @private
+   */
+  async _onToggleEditMode(event) {
+    event.preventDefault();
+    const currentMode = this.actor.flags?.surge?.editMode || false;
+    await this.actor.update({ 'flags.surge.editMode': !currentMode });
+  }
+
+  /**
+   * Resets Attributes and Skills to base levels and refunds BP.
+   * @private
+   */
+  async _onResetStats(event) {
+    event.preventDefault();
+
+    const confirm = await Dialog.confirm({
+      title: 'Reset Stats & Refund BP',
+      content:
+        '<p>Are you sure? This will reset all Attributes and Skills to Level 1 (plus species bonuses) and refund the Buy Points to your pool.</p>',
+      defaultYes: false,
+    });
+    if (!confirm) return;
+
+    const actor = this.actor;
+    const updates = {};
+    let bpRefund = 0;
+
+    // 1. Reset Attributes
+    // We need to know the species bonus to reset correctly
+    const speciesItem = actor.items.find((i) => i.type === 'species');
+    const speciesBonusAttr = speciesItem?.system?.attributeBonus?.attribute;
+    const speciesBonusValue = speciesItem?.system?.attributeBonus?.value || 0;
+
+    for (const [key, attr] of Object.entries(actor.system.attributes)) {
+      let baseValue = 1;
+      if (key === speciesBonusAttr) baseValue += speciesBonusValue;
+
+      if (attr.value > baseValue) {
+        const diff = attr.value - baseValue;
+        bpRefund += diff * 4; // Flat cost 4 per level
+        updates[`system.attributes.${key}.value`] = baseValue;
+      }
+    }
+
+    // 2. Reset Skills
+    for (const [key, skill] of Object.entries(actor.system.skills)) {
+      const baseValue = 1;
+      if (skill.value > baseValue) {
+        const diff = skill.value - baseValue;
+        bpRefund += diff * 3; // Flat cost 3 per level
+        updates[`system.skills.${key}.value`] = baseValue;
+      }
+    }
+
+    // 3. Update BP
+    const currentBp = actor.system.buyPoints.value || 0;
+    updates['system.buyPoints.value'] = currentBp + bpRefund;
+
+    await actor.update(updates);
+    ui.notifications.info(`Stats reset. Refunded ${bpRefund} BP.`);
+  }
+
+  /**
+   * Generic handler to swap the chosen trait for any species.
+   * Replaces _onChangeDjinnTrait.
+   * @private
+   */
+  async _onChangeSpeciesTrait(event) {
+    event.preventDefault();
+    const actor = this.actor;
+
+    const speciesItem = actor.items.find((i) => i.type === 'species');
+    if (!speciesItem || !speciesItem.system.traitOptions) return;
+
+    const traitOptions = speciesItem.system.traitOptions;
+
+    // 1. Remove current trait(s) belonging to this species options
+    const traitOptionNames = traitOptions.map((t) => t.name);
+    const currentTraits = actor.items.filter(
+      (i) => i.type === 'trait' && traitOptionNames.includes(i.name)
+    );
+    if (currentTraits.length > 0) {
+      const idsToDelete = currentTraits.map((t) => t.id);
+      await actor.deleteEmbeddedDocuments('Item', idsToDelete);
+    }
+
+    // 2. Prompt for new trait
+    const traitPack = game.packs.get('surge.surge-traits');
+    if (!traitPack)
+      return ui.notifications.error(
+        "Could not find 'SURGE! Traits' compendium."
+      );
+    await traitPack.getIndex();
+
+    let traitChoices = {};
+    for (const option of traitOptions) {
+      const entry = traitPack.index.find((e) => e.name === option.name);
+      if (entry) traitChoices[entry._id] = option.name;
+    }
+
+    const chosenId = await new Promise((resolve) => {
+      new Dialog({
+        title: `Change ${speciesItem.name} Trait`,
+        content: `<div class="form-group"><label>Choose Trait:</label> <select name="choice">${Object.entries(
+          traitChoices
+        )
+          .map(([id, name]) => `<option value="${id}">${name}</option>`)
+          .join('')}</select></div>`,
+        buttons: {
+          ok: {
+            label: 'Select',
+            callback: (html) => resolve(html.find('select').val()),
+          },
+        },
+        default: 'ok',
+        close: () => resolve(null),
+      }).render(true);
+    });
+
+    if (chosenId) {
+      const traitDoc = await traitPack.getDocument(chosenId);
+      await actor.createEmbeddedDocuments('Item', [traitDoc.toObject()]);
+      ui.notifications.info(`Trait changed to: ${traitDoc.name}`);
+    }
   }
 
   // Define other event handler methods like _onItemAttack, etc.
