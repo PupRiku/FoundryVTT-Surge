@@ -931,3 +931,19 @@
   font-style: italic;
   margin-left: 3px;
 }
+
+.surge .change-species-trait {
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.7em;
+  padding: 2px 5px;
+  margin-left: 8px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.surge .toggle-edit-mode {
+  cursor: pointer;
+  font-size: 1.1em;
+}

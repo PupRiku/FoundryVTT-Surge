@@ -27,11 +27,17 @@
         {{! Old header-details div removed/empty }}
         <div class="flexrow" style="align-items: center;">
           <h3 class="species-trait">{{speciesAndTraitDisplay}}</h3>
-          {{#if isDjinn}}
-            <button type="button" class="change-djinn-trait" title="Change Djinn Trait">
-              <i class="fas fa-sync-alt"></i> Change Trait
+          {{! GENERIC TRAIT BUTTON }}
+          {{#if hasTraitOptions}}
+            <button type="button" class="change-species-trait" title="Change Species Trait">
+              <i class="fas fa-sync-alt"></i> Change
             </button>
           {{/if}}
+
+          {{! EDIT MODE TOGGLE }}
+          <a class="toggle-edit-mode" title="Toggle Manual Edit Mode" style="margin-left: 10px; color: #444;">
+             {{#if isEditMode}}<i class="fas fa-unlock"></i>{{else}}<i class="fas fa-lock"></i>{{/if}}
+          </a>
         </div>
       </div>
 
@@ -127,6 +133,11 @@
       {{! Buy Points Display }}
           <div class="buy-points-display">
             <h3>Buy Points: <span>{{systemData.buyPoints.value}}</span></h3>
+            {{#if isEditMode}}
+            <button type="button" class="reset-stats-button" style="font-size: 0.6em; width: auto; padding: 2px 6px;">
+              <i class="fas fa-undo"></i> Reset Stats & Refund BP
+            </button>
+            {{/if}}
           </div>
       <div class='main-tab-columns'>
 
@@ -143,7 +154,11 @@
                   title='Click to roll {{attribute.label}}'
                 >{{attribute.label}}</label>
         
-                <span class='attribute-block-value'>{{attribute.value}}</span>
+                {{#if ../isEditMode}}
+                  <input class='attribute-block-value' type='number' name='system.attributes.{{key}}.value' value='{{attribute.value}}' data-dtype='Number'/>
+                {{else}}
+                  <span class='attribute-block-value'>{{attribute.value}}</span>
+                {{/if}}
         
                 <a 
                   class="spend-bp-button" 
@@ -173,8 +188,12 @@
                   title='Click to roll {{skill.label}}'
                 >{{skill.label}}</label>
 
-                {{!-- Display the calculated total skill value --}}
-                <span class="skill-total" title="{{skill.tooltip}}">{{skill.total}}</span>
+                {{#if ../isEditMode}}
+                  <input class='skill-value' type='number' name='system.skills.{{key}}.value' value='{{skill.value}}' data-dtype='Number' style="width: 30px; margin-right: 5px;"/>
+                {{else}}
+                  {{!-- Just the Total Span --}}
+                  <span class="skill-total" title="{{skill.tooltip}}">{{skill.total}}</span>
+                {{/if}}
                 
                 {{!-- Spend BP Button --}}
                 <a

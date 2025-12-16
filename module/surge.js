@@ -1268,6 +1268,8 @@ export class SurgeCharacterSheet extends ActorSheet {
     // --- Species & Trait Info ---
     let speciesAndTraitDisplay = 'Unknown Species';
     const speciesItem = this.actor.items.find((i) => i.type === 'species');
+    let hasTraitOptions = false;
+
     if (speciesItem) {
       let displayText = speciesItem.name;
       const traitItem = this.actor.items.find((i) => i.type === 'trait');
@@ -1275,8 +1277,18 @@ export class SurgeCharacterSheet extends ActorSheet {
         displayText += ` (${traitItem.name})`;
       }
       speciesAndTraitDisplay = displayText;
+
+      // Check if this species has options to swap
+      if (
+        speciesItem.system.traitOptions &&
+        speciesItem.system.traitOptions.length > 0
+      ) {
+        hasTraitOptions = true;
+      }
     }
     context.speciesAndTraitDisplay = speciesAndTraitDisplay;
+    context.hasTraitOptions = hasTraitOptions;
+
     const isDjinn = speciesItem?.name === 'Djinn';
     context.isDjinn = isDjinn;
 
@@ -1442,6 +1454,9 @@ export class SurgeCharacterSheet extends ActorSheet {
       });
     }
 
+    // --- Check Edit Mode Flag ---
+    context.isEditMode = this.actor.flags?.surge?.editMode === true;
+
     console.log('SURGE! | Character Sheet Data Context:', context);
     return context;
   }
@@ -1515,6 +1530,17 @@ export class SurgeCharacterSheet extends ActorSheet {
     html
       .find('.condition-action-btn')
       .click(this._onConditionAction.bind(this));
+
+    // Toggle Edit Mode
+    html.find('.toggle-edit-mode').click(this._onToggleEditMode.bind(this));
+
+    // Reset Stats
+    html.find('.reset-stats-button').click(this._onResetStats.bind(this));
+
+    // Change Species Trait (Renamed from Djinn)
+    html
+      .find('.change-species-trait')
+      .click(this._onChangeSpeciesTrait.bind(this));
 
     // console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
@@ -1666,101 +1692,130 @@ export class SurgeCharacterSheet extends ActorSheet {
   }
 
   /**
-   * Handle the click on the "Change Djinn Trait" button.
-   * Removes the current Djinn trait, prompts for a new one, and adds it.
-   * @param {Event} event The triggering click event.
+   * Toggles the "Edit Mode" flag on the actor.
    * @private
    */
-  async _onChangeDjinnTrait(event) {
+  async _onToggleEditMode(event) {
     event.preventDefault();
+    const currentMode = this.actor.flags?.surge?.editMode || false;
+    await this.actor.update({ 'flags.surge.editMode': !currentMode });
+  }
+
+  /**
+   * Resets Attributes and Skills to base levels and refunds BP.
+   * @private
+   */
+  async _onResetStats(event) {
+    event.preventDefault();
+
+    const confirm = await Dialog.confirm({
+      title: 'Reset Stats & Refund BP',
+      content:
+        '<p>Are you sure? This will reset all Attributes and Skills to Level 1 (plus species bonuses) and refund the Buy Points to your pool.</p>',
+      defaultYes: false,
+    });
+    if (!confirm) return;
+
     const actor = this.actor;
-    console.log(`SURGE | _onChangeDjinnTrait triggered for ${actor.name}`);
+    const updates = {};
+    let bpRefund = 0;
 
-    // 1. Find the Djinn species item on the actor to get the available trait options
-    const djinnSpeciesItem = actor.items.find(
-      (i) => i.type === 'species' && i.name === 'Djinn'
-    );
-    if (!djinnSpeciesItem)
-      return ui.notifications.error(
-        'Could not find Djinn species item on this character.'
-      );
+    // 1. Reset Attributes
+    // We need to know the species bonus to reset correctly
+    const speciesItem = actor.items.find((i) => i.type === 'species');
+    const speciesBonusAttr = speciesItem?.system?.attributeBonus?.attribute;
+    const speciesBonusValue = speciesItem?.system?.attributeBonus?.value || 0;
 
-    const traitOptions = djinnSpeciesItem.system.traitOptions || [];
-    if (traitOptions.length === 0)
-      return ui.notifications.error(
-        'No trait options are defined on the Djinn species item.'
-      );
+    for (const [key, attr] of Object.entries(actor.system.attributes)) {
+      let baseValue = 1;
+      if (key === speciesBonusAttr) baseValue += speciesBonusValue;
 
-    // 2. Find and remove the CURRENT Djinn trait item(s) from the actor
-    const traitOptionNames = traitOptions.map((t) => t.name); // Get a list of just the names
-    const currentDjinnTraits = actor.items.filter(
-      (i) => i.type === 'trait' && traitOptionNames.includes(i.name)
-    );
-
-    if (currentDjinnTraits.length > 0) {
-      console.log(
-        `SURGE | Removing current Djinn traits:`,
-        currentDjinnTraits.map((t) => t.name)
-      );
-      const idsToDelete = currentDjinnTraits.map((t) => t.id);
-      await actor.deleteEmbeddedDocuments('Item', idsToDelete);
-    }
-
-    // 3. Prompt the user to select a new trait
-    const traitPack = game.packs.get('surge.surge-traits');
-    if (!traitPack)
-      return ui.notifications.error(
-        "Could not find the 'SURGE! Traits' compendium pack."
-      );
-    await traitPack.getIndex(); // Load the index of trait items
-
-    let traitChoices = {};
-    for (const option of traitOptions) {
-      const traitIndexEntry = traitPack.index.find(
-        (entry) => entry.name === option.name
-      );
-      if (traitIndexEntry) {
-        traitChoices[traitIndexEntry._id] = option.name;
+      if (attr.value > baseValue) {
+        const diff = attr.value - baseValue;
+        bpRefund += diff * 4; // Flat cost 4 per level
+        updates[`system.attributes.${key}.value`] = baseValue;
       }
     }
 
-    const chosenTraitId = await new Promise((resolve) => {
+    // 2. Reset Skills
+    for (const [key, skill] of Object.entries(actor.system.skills)) {
+      const baseValue = 1;
+      if (skill.value > baseValue) {
+        const diff = skill.value - baseValue;
+        bpRefund += diff * 3; // Flat cost 3 per level
+        updates[`system.skills.${key}.value`] = baseValue;
+      }
+    }
+
+    // 3. Update BP
+    const currentBp = actor.system.buyPoints.value || 0;
+    updates['system.buyPoints.value'] = currentBp + bpRefund;
+
+    await actor.update(updates);
+    ui.notifications.info(`Stats reset. Refunded ${bpRefund} BP.`);
+  }
+
+  /**
+   * Generic handler to swap the chosen trait for any species.
+   * Replaces _onChangeDjinnTrait.
+   * @private
+   */
+  async _onChangeSpeciesTrait(event) {
+    event.preventDefault();
+    const actor = this.actor;
+
+    const speciesItem = actor.items.find((i) => i.type === 'species');
+    if (!speciesItem || !speciesItem.system.traitOptions) return;
+
+    const traitOptions = speciesItem.system.traitOptions;
+
+    // 1. Remove current trait(s) belonging to this species options
+    const traitOptionNames = traitOptions.map((t) => t.name);
+    const currentTraits = actor.items.filter(
+      (i) => i.type === 'trait' && traitOptionNames.includes(i.name)
+    );
+    if (currentTraits.length > 0) {
+      const idsToDelete = currentTraits.map((t) => t.id);
+      await actor.deleteEmbeddedDocuments('Item', idsToDelete);
+    }
+
+    // 2. Prompt for new trait
+    const traitPack = game.packs.get('surge.surge-traits');
+    if (!traitPack)
+      return ui.notifications.error(
+        "Could not find 'SURGE! Traits' compendium."
+      );
+    await traitPack.getIndex();
+
+    let traitChoices = {};
+    for (const option of traitOptions) {
+      const entry = traitPack.index.find((e) => e.name === option.name);
+      if (entry) traitChoices[entry._id] = option.name;
+    }
+
+    const chosenId = await new Promise((resolve) => {
       new Dialog({
-        title: 'Change Djinn Trait',
-        content: `<p>Choose a new daily mutation:</p>
-                  <div class="form-group">
-                    <label for="traitChoice">Trait:</label>
-                    <select id="traitChoice" name="traitChoice">
-                        ${Object.entries(traitChoices)
-                          .map(
-                            ([id, name]) =>
-                              `<option value="${id}">${name}</option>`
-                          )
-                          .join('')}
-                    </select>
-                  </div>`,
+        title: `Change ${speciesItem.name} Trait`,
+        content: `<div class="form-group"><label>Choose Trait:</label> <select name="choice">${Object.entries(
+          traitChoices
+        )
+          .map(([id, name]) => `<option value="${id}">${name}</option>`)
+          .join('')}</select></div>`,
         buttons: {
-          select: {
-            icon: '<i class="fas fa-check"></i>',
-            label: 'Select Trait',
-            callback: (html) =>
-              resolve(html.find('select[name="traitChoice"]').val()),
+          ok: {
+            label: 'Select',
+            callback: (html) => resolve(html.find('select').val()),
           },
         },
-        default: 'select',
+        default: 'ok',
         close: () => resolve(null),
       }).render(true);
     });
 
-    // 4. Add the newly chosen trait item to the actor
-    if (chosenTraitId) {
-      const chosenTrait = await traitPack.getDocument(chosenTraitId);
-      if (chosenTrait) {
-        await actor.createEmbeddedDocuments('Item', [chosenTrait.toObject()]);
-        ui.notifications.info(`Djinn trait changed to: ${chosenTrait.name}`);
-      }
-    } else {
-      console.log('SURGE | Djinn trait selection cancelled.');
+    if (chosenId) {
+      const traitDoc = await traitPack.getDocument(chosenId);
+      await actor.createEmbeddedDocuments('Item', [traitDoc.toObject()]);
+      ui.notifications.info(`Trait changed to: ${traitDoc.name}`);
     }
   }
 
