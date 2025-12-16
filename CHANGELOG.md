@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.11.2] - 2025-12-15
+
+### ✨ New Features: Condition Actions
+
+- Added a dynamic **"Available Actions"** section to the **Effects Tab**.
+- **Stand Up:** Players with the _Prone_ condition now see a "Stand Up (1 Action)" button that automatically removes the effect and posts to chat.
+- **Patch Up:** Players with _Bleeding_ or _Broken_ conditions see context-aware buttons to remove them (reminding the GM about Item requirements).
+
+### 🛠️ New Features: Sheet Utility & Edit Mode
+
+- **Edit Mode:** Added a "Lock/Unlock" toggle to the sheet header.
+- **Manual Adjustments:** When unlocked, Attributes and Skills become editable input fields, allowing for manual overrides or corrections.
+- **Reset Stats:** Added a button (visible only in Edit Mode) to reset all Attributes and Skills to Level 1 and refund the calculated Buy Points to the pool.
+- **Remove Species:** Added a trash icon (visible only in Edit Mode) to delete the current Species and its associated Traits.
+- **Trait Swapping:** Generalized the "Change Trait" button to work for _any_ Species that offers trait choices (e.g., Djinn, Ponturi).
+
 ## [0.11.1] - 2025-12-15
 
 ### ⚠ Rule Changes

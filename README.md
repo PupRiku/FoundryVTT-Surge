@@ -12,14 +12,14 @@ This system is currently **under active development** (pre-release) but now incl
 
 ## Installation
 
-**Important:** This system is currently in a pre-release state (v0.11.1). Features may be incomplete or change. Use with caution!
+**Important:** This system is currently in a pre-release state (v0.11.2). Features may be incomplete or change. Use with caution!
 
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field... paste the following URL for the **v0.11.1** release:
+4.  In the "Manifest URL" field... paste the following URL for the **v0.11.2** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.11.1/system.json
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.11.2/system.json
     ```
 5.  Click "Install".
 
@@ -35,6 +35,8 @@ Foundry will download and install the system. You can then create a new world us
   - **Inventory Tab:** Categorized item display (Weapons, Armor/Shields, Gear) with functional Edit, Delete, Equip/Unequip controls. Attack/Damage roll buttons on weapons.
   - **Biography Tab:** Rich text editors for all biography fields.
   - **Effects Tab:** Displays active effects applied to the actor with working Toggle (Enable/Disable), Edit, and Delete controls (using custom handlers).
+  - **New in v0.11.2:** "Edit Mode" allows for manual stat overrides, resetting stats/BP, and removing Species.
+  - **New in v0.11.2:** Smart "Condition Actions" in the Effects tab (Stand Up, Patch Up) that appear based on active status effects.
 - **Item Sheet:**
   - Basic functional sheet for viewing/editing items.
   - Common fields (Name, Image, Description, Qty, Wt, Price).
