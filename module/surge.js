@@ -1404,6 +1404,24 @@ export class SurgeCharacterSheet extends ActorSheet {
       skill.isAffordable = currentBp >= skill.cost && skill.total < 20;
     }
 
+    // --- Condition Actions ---
+    context.conditionActions = [];
+
+    // Action: Stand Up
+    // Rule: "A creature may take one action to stand up."
+    // We check for the 'prone' flag. We also check if they are NOT Unconscious/Incapacitated,
+    // strictly speaking, but for UI utility, we often leave the button available
+    // and let the GM enforce the "unable to act" rule.
+    // However, if you want to be strict, you can add: && !context.actor.flags?.surge?.incapacitated
+    if (this.actor.flags?.surge?.prone) {
+      context.conditionActions.push({
+        id: 'stand-up',
+        label: 'Stand Up',
+        cost: '1 Action',
+        icon: 'fas fa-arrow-up',
+      });
+    }
+
     console.log('SURGE! | Character Sheet Data Context:', context);
     return context;
   }
@@ -1472,6 +1490,11 @@ export class SurgeCharacterSheet extends ActorSheet {
     html.find('.level-up-button').click(this._onCharacterLevelUp.bind(this));
     // Spend BP Buttons
     html.find('.spend-bp-button').click(this._onSpendBP.bind(this));
+
+    // --- Condition Action Listeners ---
+    html
+      .find('.condition-action-btn')
+      .click(this._onConditionAction.bind(this));
 
     // console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
@@ -3473,6 +3496,42 @@ export class SurgeCharacterSheet extends ActorSheet {
         `SURGE | Delete clicked for non-existent effect ID: ${effectId}`
       );
     }
+  }
+
+  /**
+   * Handle specific actions related to active conditions (Stand Up, Break Free, etc.)
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onConditionAction(event) {
+    event.preventDefault();
+    const actionId = event.currentTarget.dataset.action;
+    const actor = this.actor;
+
+    console.log(`SURGE | Processing Condition Action: ${actionId}`);
+
+    if (actionId === 'stand-up') {
+      // 1. Find the Prone effect
+      // We look for the effect that sets the specific flag
+      const proneEffect = actor.effects.find(
+        (e) =>
+          e.changes.some((c) => c.key === 'flags.surge.prone') && !e.disabled
+      );
+
+      if (proneEffect) {
+        // 2. Delete the effect
+        await proneEffect.delete();
+
+        // 3. Send Chat Message
+        ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: actor }),
+          content: `<strong>${actor.name}</strong> spends 1 Action to stand up, removing the <strong>Prone</strong> condition.`,
+        });
+      } else {
+        ui.notifications.warn('Could not find the Prone effect to remove.');
+      }
+    }
+    // Future actions (Break Free, Patch Up) will go here as else/if blocks
   }
 
   // Define other event handler methods like _onItemAttack, etc.

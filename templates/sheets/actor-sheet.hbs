@@ -448,6 +448,21 @@
 
     {{! Effects Tab Content }}
     <div class='tab effects' data-group='primary' data-tab='effects'>
+      {{! --- Condition Actions Section ---}}
+      {{#if conditionActions.length}}
+      <div class="condition-actions-container">
+        <h3 class="item-list-header">Available Actions</h3>
+        <div class="condition-actions-list">
+          {{#each conditionActions as |action|}}
+          <button type="button" class="condition-action-btn" data-action="{{action.id}}">
+            <i class="{{action.icon}}"></i> {{action.label}} <span class="cost">({{action.cost}})</span>
+          </button>
+          {{/each}}
+        </div>
+      </div>
+      <hr>
+      {{! ---------------------------------}}
+
       <h3 class="effects-header">Active Effects</h3>
 
       {{! Optional: Add Control Button - We can add this later if needed }}
