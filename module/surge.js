@@ -4736,12 +4736,12 @@ Hooks.once('ready', () => {
 
 // Register the character sheet with Foundry
 Actors.registerSheet(
-  'surge', // The system ID defined in your system.json
-  SurgeCharacterSheet, // The sheet class you just defined
+  'surge',
+  SurgeCharacterSheet,
   {
-    types: ['character'], // Apply this sheet ONLY to actors of type "character"
-    makeDefault: true, // Make this the default sheet for characters
-    label: 'SURGE! - Character Sheet', // Name displayed in the sheet selection dropdown
+    types: ['character', 'npc'],
+    makeDefault: true,
+    label: 'SURGE! Sheet',
   }
 );
 
