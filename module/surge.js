@@ -1073,7 +1073,7 @@ export class SurgeCharacterSheet extends ActorSheet {
   get template() {
     // If the actor type is 'npc', use npc-sheet.hbs
     // Otherwise (character), use character-sheet.hbs
-    return `systems/surge/templates/sheets/${this.actor.type}-sheet.hbs`
+    return `systems/surge/templates/sheets/${this.actor.type}-sheet.hbs`;
   }
 
   // Lookup table for level to roll formula components
@@ -1269,35 +1269,36 @@ export class SurgeCharacterSheet extends ActorSheet {
    */
   async getData(options) {
     const context = await super.getData(options);
-    context.systemData = context.actor.system;
+    const actorData = this.actor.toObject(false);
 
-    // --- Species & Trait Info ---
-    let speciesAndTraitDisplay = 'Unknown Species';
-    const speciesItem = this.actor.items.find((i) => i.type === 'species');
-    let hasTraitOptions = false;
+    context.systemData = actorData.system;
+    context.flags = actorData.flags;
 
-    if (speciesItem) {
-      let displayText = speciesItem.name;
-      const traitItem = this.actor.items.find((i) => i.type === 'trait');
-      if (traitItem) {
-        displayText += ` (${traitItem.name})`;
-      }
-      speciesAndTraitDisplay = displayText;
+    // =====================================================
+    // 1. COMMON LOGIC (Runs for Characters & NPCs)
+    // =====================================================
 
-      // Check if this species has options to swap
+    // Calculate Max Actions
+    const dexLevel = context.systemData.attributes?.dex?.value ?? 1;
+    context.calculatedActions = {
+      max: Math.floor(dexLevel / 2) + 2,
+      label: 'Actions per Turn',
+    };
+
+    // Calculate Total Menace
+    const baseMenace = Number(context.systemData.passives?.menace?.base ?? 0);
+    let equipmentMenace = 0;
+    for (const item of this.actor.items) {
       if (
-        speciesItem.system.traitOptions &&
-        speciesItem.system.traitOptions.length > 0
+        item.system?.equipped === true &&
+        typeof item.system?.menaceContribution === 'number'
       ) {
-        hasTraitOptions = true;
+        equipmentMenace += item.system.menaceContribution;
       }
     }
-    context.speciesAndTraitDisplay = speciesAndTraitDisplay;
-    context.hasSpecies = !!speciesItem;
-    context.hasTraitOptions = hasTraitOptions;
-
-    const isDjinn = speciesItem?.name === 'Djinn';
-    context.isDjinn = isDjinn;
+    const totalMenace = baseMenace + equipmentMenace;
+    context.systemData.passives.menace.total = totalMenace;
+    context.systemData.passives.menace.tooltip = `Base: ${baseMenace} + Equip: ${equipmentMenace} = Total: ${totalMenace}`;
 
     // --- Calculate Skill Totals from Trait Bonuses ---
     const skillBonuses = {};
@@ -1315,123 +1316,10 @@ export class SurgeCharacterSheet extends ActorSheet {
       skill.tooltip = `Base: ${skill.value} + Traits: ${bonus}`;
     }
 
-    // --- DERIVED STAT CALCULATIONS (MUST HAPPEN BEFORE DISPLAY LOGIC) ---
-
-    // Calculate Max Actions
-    const dexLevel = context.systemData.attributes?.dex?.value ?? 1;
-    context.calculatedActions = {
-      max: Math.floor(dexLevel / 2) + 2,
-      label: 'Actions per Turn',
-    };
-
-    // Calculate Max HP
-    const baseHp = context.systemData.passives?.hp?.base ?? 0;
-    const encounter = context.systemData.passives?.encounter?.value ?? 0;
-    const startingMaxHp =
-      context.systemData.passives?.hp?.startingMax ?? baseHp;
-    context.systemData.passives.hp.max = startingMaxHp + encounter;
-    context.systemData.passives.hp.value = Math.min(
-      context.systemData.passives.hp.value,
-      context.systemData.passives.hp.max
-    );
-
-    // Calculate Total Menace
-    const baseMenace = Number(context.systemData.passives?.menace?.base ?? 0);
-    let equipmentMenace = 0;
-    for (const item of this.actor.items) {
-      if (
-        item.system?.equipped === true &&
-        typeof item.system?.menaceContribution === 'number'
-      ) {
-        equipmentMenace += item.system.menaceContribution;
-      }
-    }
-    const totalMenace = baseMenace + equipmentMenace;
-    context.systemData.passives.menace.total = totalMenace;
-    context.systemData.passives.menace.tooltip = `Base: ${baseMenace} + Equip: ${equipmentMenace} = Total: ${totalMenace}`;
-
-    // --- DISPLAY LOGIC (MOVED TO THE END) ---
-
-    const hasSpecies = this.actor.items.some((i) => i.type === 'species');
-
-    // Create display-specific variables. Show '?' if no species is present.
-    context.displayHP = hasSpecies ? context.systemData.passives.hp.value : '?';
-    context.displayMaxHP = hasSpecies
-      ? context.systemData.passives.hp.max
-      : '?';
-    context.displayRecovery = hasSpecies
-      ? context.systemData.passives.recovery.value
-      : '?';
-    context.displayMovement = hasSpecies
-      ? context.systemData.passives.movement.value
-      : '?';
-    context.displayMenace = hasSpecies
-      ? context.systemData.passives.menace.total
-      : '?';
-
-    // Calculate HP Status Label & Death Save Button State
-    let hpStatusLabel = 'Healthy';
-    let deathSaveButtonDisabled = true;
-    const currentHp = context.systemData.passives.hp.value;
-    const maxHp = context.systemData.passives.hp.max;
-    const defeatedStatusId = CONFIG.Combat.defeatedStatusId ?? 'dead';
-    const isActuallyDead = this.actor.statuses.has(defeatedStatusId);
-    const deathSaveEffect = this.actor.effects.find(
-      (e) => e.flags?.surge?.deathSavesStage && !e.disabled
-    );
-    const actorDeathSaveStage = deathSaveEffect?.flags?.surge?.deathSavesStage;
-
-    if (isActuallyDead) {
-      hpStatusLabel = 'Dead';
-      deathSaveButtonDisabled = true;
-    } else if (actorDeathSaveStage === 'conscious') {
-      hpStatusLabel = 'Dying - Conscious';
-      deathSaveButtonDisabled = false;
-    } else if (actorDeathSaveStage === 'unconscious') {
-      hpStatusLabel = 'Dying - Unconscious';
-      deathSaveButtonDisabled = false;
-    } else if (currentHp <= 0 && hasSpecies) {
-      // Only show dying state if they have a species
-      hpStatusLabel = 'Dying (Awaiting State)';
-      deathSaveButtonDisabled = false;
-    } else if (maxHp > 0 && currentHp <= maxHp / 2) {
-      hpStatusLabel = 'Bloodied';
-      deathSaveButtonDisabled = true;
-    } else if (!hasSpecies) {
-      // If no species, show unknown
-      hpStatusLabel = 'Unknown';
-      deathSaveButtonDisabled = true;
-    } else {
-      hpStatusLabel = 'Healthy';
-      deathSaveButtonDisabled = true;
-    }
-    context.hpStatusLabel = hpStatusLabel;
-    context.deathSaveButtonDisabled = deathSaveButtonDisabled;
-
-    // --- Calculate BP Costs & Affordability for UI ---
-    const currentBp = context.systemData.buyPoints.value || 0;
-
-    // Attributes
-    for (const attr of Object.values(context.systemData.attributes)) {
-      attr.cost = 4;
-      attr.isAffordable = currentBp >= attr.cost && attr.value < 20;
-    }
-
-    // Skills (Cost is now flat 3)
-    for (const skill of Object.values(context.systemData.skills)) {
-      skill.cost = 3;
-      skill.isAffordable = currentBp >= skill.cost && skill.total < 20;
-    }
-
     // --- Condition Actions ---
     context.conditionActions = [];
 
     // Action: Stand Up
-    // Rule: "A creature may take one action to stand up."
-    // We check for the 'prone' flag. We also check if they are NOT Unconscious/Incapacitated,
-    // strictly speaking, but for UI utility, we often leave the button available
-    // and let the GM enforce the "unable to act" rule.
-    // However, if you want to be strict, you can add: && !context.actor.flags?.surge?.incapacitated
     if (this.actor.flags?.surge?.prone) {
       context.conditionActions.push({
         id: 'stand-up',
@@ -1461,10 +1349,145 @@ export class SurgeCharacterSheet extends ActorSheet {
       });
     }
 
-    // --- Check Edit Mode Flag ---
-    context.isEditMode = this.actor.flags?.surge?.editMode === true;
+    // =====================================================
+    // 2. CHARACTER SPECIFIC LOGIC
+    // =====================================================
+    if (this.actor.type === 'character') {
+      // --- Species & Trait Info ---
+      let speciesAndTraitDisplay = 'Unknown Species';
+      const speciesItem = this.actor.items.find((i) => i.type === 'species');
+      let hasTraitOptions = false;
 
-    console.log('SURGE! | Character Sheet Data Context:', context);
+      if (speciesItem) {
+        let displayText = speciesItem.name;
+        const traitItem = this.actor.items.find((i) => i.type === 'trait');
+        if (traitItem) {
+          displayText += ` (${traitItem.name})`;
+        }
+        speciesAndTraitDisplay = displayText;
+
+        // Check if this species has options to swap
+        if (
+          speciesItem.system.traitOptions &&
+          speciesItem.system.traitOptions.length > 0
+        ) {
+          hasTraitOptions = true;
+        }
+      }
+      context.speciesAndTraitDisplay = speciesAndTraitDisplay;
+      context.hasSpecies = !!speciesItem;
+      context.hasTraitOptions = hasTraitOptions;
+
+      // --- Buy Point Calculations ---
+      if (context.systemData.buyPoints) {
+        const currentBp = context.systemData.buyPoints.value || 0;
+
+        // Attributes
+        for (const attr of Object.values(context.systemData.attributes)) {
+          attr.cost = 4;
+          attr.isAffordable = currentBp >= attr.cost && attr.value < 20;
+        }
+
+        // Skills (Cost is now flat 3)
+        for (const skill of Object.values(context.systemData.skills)) {
+          skill.cost = 3;
+          skill.isAffordable = currentBp >= skill.cost && skill.total < 20;
+        }
+      }
+
+      // --- Check Edit Mode Flag ---
+      context.isEditMode = this.actor.flags?.surge?.editMode === true;
+
+      // --- Derived HP Calculation (Character Rules) ---
+      // Characters derive Max HP from Species Base + Encounter Stat
+      const baseHp = context.systemData.passives?.hp?.base ?? 0;
+      const encounter = context.systemData.passives?.encounter?.value ?? 0;
+      const startingMaxHp =
+        context.systemData.passives?.hp?.startingMax ?? baseHp;
+
+      context.systemData.passives.hp.max = startingMaxHp + encounter;
+      context.systemData.passives.hp.value = Math.min(
+        context.systemData.passives.hp.value,
+        context.systemData.passives.hp.max
+      );
+
+      // --- Display Masking (Show '?' if no Species) ---
+      const hasSpecies = context.hasSpecies;
+      context.displayHP = hasSpecies
+        ? context.systemData.passives.hp.value
+        : '?';
+      context.displayMaxHP = hasSpecies
+        ? context.systemData.passives.hp.max
+        : '?';
+      context.displayRecovery = hasSpecies
+        ? context.systemData.passives.recovery.value
+        : '?';
+      context.displayMovement = hasSpecies
+        ? context.systemData.passives.movement.value
+        : '?';
+      context.displayMenace = hasSpecies
+        ? context.systemData.passives.menace.total
+        : '?';
+
+      // --- Character Status & Death Saves ---
+      let hpStatusLabel = 'Healthy';
+      let deathSaveButtonDisabled = true;
+      const currentHp = context.systemData.passives.hp.value;
+      const maxHp = context.systemData.passives.hp.max;
+      const defeatedStatusId = CONFIG.Combat.defeatedStatusId ?? 'dead';
+      const isActuallyDead = this.actor.statuses.has(defeatedStatusId);
+      const deathSaveEffect = this.actor.effects.find(
+        (e) => e.flags?.surge?.deathSavesStage && !e.disabled
+      );
+      const actorDeathSaveStage =
+        deathSaveEffect?.flags?.surge?.deathSavesStage;
+
+      if (isActuallyDead) {
+        hpStatusLabel = 'Dead';
+        deathSaveButtonDisabled = true;
+      } else if (actorDeathSaveStage === 'conscious') {
+        hpStatusLabel = 'Dying - Conscious';
+        deathSaveButtonDisabled = false;
+      } else if (actorDeathSaveStage === 'unconscious') {
+        hpStatusLabel = 'Dying - Unconscious';
+        deathSaveButtonDisabled = false;
+      } else if (currentHp <= 0 && hasSpecies) {
+        hpStatusLabel = 'Dying (Awaiting State)';
+        deathSaveButtonDisabled = false;
+      } else if (maxHp > 0 && currentHp <= maxHp / 2) {
+        hpStatusLabel = 'Bloodied';
+        deathSaveButtonDisabled = true;
+      } else if (!hasSpecies) {
+        hpStatusLabel = 'Unknown';
+        deathSaveButtonDisabled = true;
+      } else {
+        hpStatusLabel = 'Healthy';
+        deathSaveButtonDisabled = true;
+      }
+
+      context.hpStatusLabel = hpStatusLabel;
+      context.deathSaveButtonDisabled = deathSaveButtonDisabled;
+    }
+
+    // =====================================================
+    // 3. NPC SPECIFIC LOGIC
+    // =====================================================
+    else {
+      // --- Simple Display (No Masking) ---
+      // NPCs just show their raw values
+      context.displayHP = context.systemData.passives.hp.value;
+      context.displayMaxHP = context.systemData.passives.hp.max;
+      context.displayRecovery = context.systemData.passives.recovery.value;
+      context.displayMovement = context.systemData.passives.movement.value;
+      context.displayMenace = context.systemData.passives.menace.total;
+
+      // --- Simple Status ---
+      context.hpStatusLabel =
+        context.systemData.passives.hp.value <= 0 ? 'Dead' : 'Active';
+      context.deathSaveButtonDisabled = true;
+    }
+
+    console.log('SURGE! | Sheet Data Context:', context);
     return context;
   }
 
@@ -4735,15 +4758,11 @@ Hooks.once('ready', () => {
 // --- System Initialization ---
 
 // Register the character sheet with Foundry
-Actors.registerSheet(
-  'surge',
-  SurgeCharacterSheet,
-  {
-    types: ['character', 'npc'],
-    makeDefault: true,
-    label: 'SURGE! Sheet',
-  }
-);
+Actors.registerSheet('surge', SurgeCharacterSheet, {
+  types: ['character', 'npc'],
+  makeDefault: true,
+  label: 'SURGE! Sheet',
+});
 
 // Example function for preloading templates (call in init hook)
 // async function preloadHandlebarsTemplates() {
