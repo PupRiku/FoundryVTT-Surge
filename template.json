@@ -1,78 +1,69 @@
 {
   "Actor": {
     "types": ["character", "npc"],
+    "templates": {
+      "base": {
+        "attributes": {
+          "str": { "value": 1, "label": "Strength" },
+          "dex": { "value": 1, "label": "Dexterity" },
+          "int": { "value": 1, "label": "Intelligence" },
+          "cha": { "value": 1, "label": "Charisma" },
+          "luk": { "value": 1, "label": "Luck" }
+        },
+        "passives": {
+          "hp": {
+            "value": 10,
+            "max": 10,
+            "min": 0,
+            "base": 10,
+            "startingMax": 10
+          },
+          "movement": { "value": 10, "label": "Movement" },
+          "menace": { "value": 0, "total": 0, "base": 0, "label": "Menace" },
+          "recovery": { "value": 0, "label": "Recovery" },
+          "encounter": { "value": 0, "label": "En-Counter" }
+        },
+        "skills": {
+          "martial": { "value": 1, "label": "Martial Combat" },
+          "marksmanship": { "value": 1, "label": "Marksmanship" },
+          "guile": { "value": 1, "label": "Guile" },
+          "mystic": { "value": 1, "label": "Mystic" },
+          "medicine": { "value": 1, "label": "Medicine" },
+          "survival": { "value": 1, "label": "Survival" },
+          "mechanical": { "value": 1, "label": "Mechanical" },
+          "culture": { "value": 1, "label": "Culture" },
+          "clerical": { "value": 1, "label": "Clerical" },
+          "metallurgy": { "value": 1, "label": "Metallurgy" },
+          "leathercraft": { "value": 1, "label": "Leathercraft" },
+          "woodcraft": { "value": 1, "label": "Woodcraft" },
+          "memory": { "value": 1, "label": "Memory" }
+        },
+        "biography": {
+          "notes": ""
+        }
+      }
+    },
     "character": {
+      "templates": ["base"],
       "details": {
-        "level": { "value": 1, "label": "Character Level" },
-        "species": "",
-        "chosen_trait": "",
-        "size": "Medium"
+        "level": { "value": 1, "label": "Level" },
+        "xp": { "value": 0, "min": 0 }
       },
+      "buyPoints": { "value": 0, "total": 0 },
       "biography": {
         "appearance": "",
+        "origin": "",
         "involved": "",
         "why_here": "",
         "aspirations": "",
-        "origin": "",
-        "allies_enemies": "",
-        "notes": ""
-      },
-      "buyPoints": {
-        "value": 0,
-        "total": 0
-      },
-      "attributes": {
-        "str": { "value": 1, "label": "Strength" },
-        "dex": { "value": 1, "label": "Dexterity" },
-        "int": { "value": 1, "label": "Intelligence" },
-        "cha": { "value": 1, "label": "Charisma" },
-        "luk": { "value": 1, "label": "Luck" }
-      },
-      "skills": {
-        "clerical": { "value": 1, "label": "Clerical" },
-        "culture": { "value": 1, "label": "Culture" },
-        "guile": { "value": 1, "label": "Guile" },
-        "leathercraft": { "value": 1, "label": "Leathercraft" },
-        "marksmanship": { "value": 1, "label": "Marksmanship" },
-        "martial": { "value": 1, "label": "Martial Combat" },
-        "mechanical": { "value": 1, "label": "Mechanical" },
-        "medicine": { "value": 1, "label": "Medicine" },
-        "memory": { "value": 1, "label": "Memory" },
-        "metallurgy": { "value": 1, "label": "Metallurgy" },
-        "mystic": { "value": 1, "label": "Mystic" },
-        "survival": { "value": 1, "label": "Survival" },
-        "woodcraft": { "value": 1, "label": "Woodcraft" }
-      },
-      "passives": {
-        "hp": {
-          "value": 0,
-          "max": 0,
-          "base": 0,
-          "startingMax": 0
-        },
-        "recovery": {
-          "label": "Recovery Points",
-          "value": 0
-        },
-        "menace": {
-          "label": "Menace",
-          "base": 0
-        },
-        "encounter": {
-          "label": "En-Counter",
-          "value": 0
-        },
-        "movement": {
-          "label": "Movement Speed",
-          "value": 0
-        }
-      },
-      "currency": {
-        "gold": { "value": 100 }
+        "allies_enemies": ""
       }
     },
     "npc": {
-      "notes": ""
+      "templates": ["base"],
+      "details": {
+        "role": { "value": "", "label": "Role" }
+      }
     }
   },
   "Item": {
