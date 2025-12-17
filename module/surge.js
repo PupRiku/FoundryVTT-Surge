@@ -1349,6 +1349,17 @@ export class SurgeCharacterSheet extends ActorSheet {
       });
     }
 
+    // --- Active Effects (Fix for NPC Sheet) ---
+    // Pass the effects as a clean array to ensure the template renders them.
+    context.effects = this.actor.effects.map((e) => {
+      return {
+        id: e.id,
+        name: e.name,
+        img: e.icon, // Note: Foundry uses 'icon' on the object, 'img' on the item
+        disabled: e.disabled,
+      };
+    });
+
     // =====================================================
     // 2. CHARACTER SPECIFIC LOGIC
     // =====================================================

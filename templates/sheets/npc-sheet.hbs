@@ -79,10 +79,9 @@
     </div>
   </header>
 
-  <hr />
-
-  {{! Main Content Area (2 Columns) }}
-  <div class='sheet-body flexrow'>
+  {{! Main Content Area }}
+  {{! We remove the <hr> and ensure strict classes to avoid the 'gap' }}
+  <div class='sheet-body flexrow npc-body'>
 
     {{! LEFT COLUMN: Attributes }}
     <aside class='sidebar-attributes'>
@@ -108,7 +107,7 @@
     {{! RIGHT COLUMN: Skills, Actions, Gear }}
     <section class='main-content'>
 
-      {{! Condition Actions }}
+      {{! Condition Actions (Top of Right Column) }}
       {{#if conditionActions.length}}
         <div class='condition-actions-container'>
           <div class='condition-actions-list'>
@@ -124,6 +123,30 @@
               </button>
             {{/each}}
           </div>
+        </div>
+      {{/if}}
+
+      {{! Active Effects List (Moved Up so you can see them!) }}
+      {{#if effects.length}}
+        <div class='effects-container'>
+          <h3 class='item-list-header'>Active Conditions</h3>
+          <ol class='effects-list item-list'>
+            {{#each effects as |effect|}}
+              <li class='effect item flexrow' data-effect-id='{{effect.id}}'>
+                <img class='effect-icon item-image' src='{{effect.img}}' />
+                <div class='effect-data item-name'>
+                  <h4 class='effect-name'>{{effect.name}}</h4>
+                </div>
+                <div class='effect-controls item-controls'>
+                  <a
+                    class='effect-control item-delete'
+                    data-action='delete'
+                    title='Remove'
+                  ><i class='fas fa-trash'></i></a>
+                </div>
+              </li>
+            {{/each}}
+          </ol>
         </div>
       {{/if}}
 
