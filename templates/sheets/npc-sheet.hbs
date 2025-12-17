@@ -1,0 +1,205 @@
+<form class='{{cssClass}} flexcol' autocomplete='off'>
+
+  {{! NPC Header }}
+  <header class='sheet-header'>
+    <div class='header-top-row'>
+      <img
+        class='profile-img'
+        src='{{actor.img}}'
+        data-edit='img'
+        title='{{actor.name}}'
+        height='100'
+        width='100'
+      />
+      <div class='charname-block'>
+        <h1 class='charname'>
+          <input
+            name='name'
+            type='text'
+            value='{{actor.name}}'
+            placeholder='NPC Name'
+          />
+        </h1>
+        <div class='flexrow' style='gap: 5px; margin-top: 5px;'>
+          <input
+            type='text'
+            name='system.details.role.value'
+            value='{{systemData.details.role.value}}'
+            placeholder='Role / Type (e.g. Guard)'
+            style='font-style: italic;'
+          />
+        </div>
+      </div>
+    </div>
+
+    {{! Resources Grid }}
+    <div class='header-passives-grid'>
+      <div class='passive-grid-item hp'>
+        <label>HP</label>
+        <div class='resource-value flexrow'>
+          <input
+            type='text'
+            name='system.passives.hp.value'
+            value='{{systemData.passives.hp.value}}'
+            data-dtype='Number'
+          />
+          <span> / </span>
+          <input
+            type='text'
+            name='system.passives.hp.max'
+            value='{{systemData.passives.hp.max}}'
+            data-dtype='Number'
+          />
+        </div>
+      </div>
+      <div class='passive-grid-item'>
+        <label>Move</label>
+        <input
+          type='number'
+          name='system.passives.movement.value'
+          value='{{systemData.passives.movement.value}}'
+        />
+      </div>
+      <div class='passive-grid-item'>
+        <label>Menace</label>
+        <input
+          type='number'
+          name='system.passives.menace.base'
+          value='{{systemData.passives.menace.base}}'
+        />
+      </div>
+      <div class='passive-grid-item'>
+        <label>Recovery</label>
+        <input
+          type='number'
+          name='system.passives.recovery.value'
+          value='{{systemData.passives.recovery.value}}'
+        />
+      </div>
+    </div>
+  </header>
+
+  {{! NPC Body }}
+  <section class='sheet-body' style='padding: 5px;'>
+
+    {{! Condition Actions (Reused Logic!) }}
+    {{#if conditionActions.length}}
+      <div class='condition-actions-container'>
+        <h3 class='item-list-header'>Actions</h3>
+        <div class='condition-actions-list'>
+          {{#each conditionActions as |action|}}
+            <button
+              type='button'
+              class='condition-action-btn'
+              data-action='{{action.id}}'
+            >
+              <i class='{{action.icon}}'></i>
+              {{action.label}}
+              <span class='cost'>({{action.cost}})</span>
+            </button>
+          {{/each}}
+        </div>
+      </div>
+    {{/if}}
+
+    {{! Compact Attributes Grid }}
+    <h3 class='item-list-header'>Attributes</h3>
+    <div
+      class='grid grid-5col'
+      style='gap: 5px; margin-bottom: 10px; text-align: center;'
+    >
+      {{#each systemData.attributes as |attr key|}}
+        <div
+          class='attribute-block'
+          data-attribute='{{key}}'
+          style='padding: 2px;'
+        >
+          <label
+            class='attribute-block-label rollable'
+            data-attribute='{{key}}'
+            style='font-size: 0.8em;'
+          >{{attr.label}}</label>
+          <input
+            class='attribute-block-value'
+            type='number'
+            name='system.attributes.{{key}}.value'
+            value='{{attr.value}}'
+            style='width: 100%; font-size: 1.1em;'
+          />
+        </div>
+      {{/each}}
+    </div>
+
+    {{! Compact Skills Grid }}
+    <h3 class='item-list-header'>Skills</h3>
+    <div class='grid grid-3col' style='gap: 5px; margin-bottom: 15px;'>
+      {{#each systemData.skills as |skill key|}}
+        <div
+          class='skill-item flexrow'
+          style='justify-content: space-between; font-size: 0.9em;'
+        >
+          <label
+            class='skill-label rollable'
+            data-skill='{{key}}'
+          >{{skill.label}}</label>
+          {{! NPCs just edit the value directly }}
+          <input
+            class='skill-value'
+            type='number'
+            name='system.skills.{{key}}.value'
+            value='{{skill.value}}'
+            style='width: 30px; text-align: center;'
+          />
+        </div>
+      {{/each}}
+    </div>
+
+    {{! Inventory (Simplified) }}
+    <h3 class='item-list-header'>Gear & Attacks</h3>
+    <ol class='item-list'>
+      {{#each actor.items as |item id|}}
+        <li class='item flexrow' data-item-id='{{item.id}}'>
+          <img class='item-image' src='{{item.img}}' width='24' height='24' />
+          <h4 class='item-name'>{{item.name}}</h4>
+          <div class='item-controls'>
+            {{#if (eq item.type 'weapon')}}
+              <a class='item-control item-roll-attack' title='Attack'><i
+                  class='fas fa-crosshairs'
+                ></i></a>
+              <a class='item-control item-roll-damage' title='Damage'><i
+                  class='fas fa-dice-d6'
+                ></i></a>
+            {{/if}}
+            <a class='item-control item-edit' title='Edit'><i
+                class='fas fa-edit'
+              ></i></a>
+            <a class='item-control item-delete' title='Delete'><i
+                class='fas fa-trash'
+              ></i></a>
+          </div>
+        </li>
+      {{/each}}
+    </ol>
+
+    {{! Active Effects List }}
+    <h3 class='item-list-header' style='margin-top: 10px;'>Active Effects</h3>
+    <ol class='effects-list item-list'>
+      {{#each actor.effects as |effect|}}
+        <li class='effect item flexrow' data-effect-id='{{effect.id}}'>
+          <img class='effect-icon item-image' src='{{effect.img}}' />
+          <div class='effect-data item-name'>
+            <h4 class='effect-name'>{{effect.name}}</h4>
+          </div>
+          <div class='effect-controls item-controls'>
+            <a
+              class='effect-control item-delete'
+              data-action='delete'
+              title='Remove'
+            ><i class='fas fa-trash'></i></a>
+          </div>
+        </li>
+      {{/each}}
+    </ol>
+
+  </section>
+</form>
