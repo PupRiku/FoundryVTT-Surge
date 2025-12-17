@@ -1055,10 +1055,8 @@ export class SurgeCharacterSheet extends ActorSheet {
   static get defaultOptions() {
     // console.log('SURGE! | Getting REVISED default options (with tabs)...'); // Log message updated
     return foundry.utils.mergeObject(super.defaultOptions, {
-      classes: ['surge', 'sheet', 'actor', 'character'],
-      template: 'systems/surge/templates/sheets/actor-sheet.hbs',
+      classes: ['surge', 'sheet', 'actor'],
       resizable: true,
-      // ADD TABS CONFIGURATION BACK:
       tabs: [
         {
           navSelector: '.sheet-tabs',
@@ -1066,8 +1064,16 @@ export class SurgeCharacterSheet extends ActorSheet {
           initial: 'main',
         },
       ],
-      // Still leave out width/height for now
     });
+  }
+
+  /**
+   * Dynamically select the HTML template based on actor type.
+   */
+  get template() {
+    // If the actor type is 'npc', use npc-sheet.hbs
+    // Otherwise (character), use character-sheet.hbs
+    return `systems/surge/templates/sheets/${this.actor.type}-sheet.hbs`
   }
 
   // Lookup table for level to roll formula components
