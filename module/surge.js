@@ -2370,11 +2370,13 @@ export class SurgeCharacterSheet extends ActorSheet {
   /**
    * Handle clicking the attack button on a weapon item.
    * Performs the attack roll using the weapon's skill and relevant modifiers.
+   * Checks for Action Point cost defined on the weapon (system.actionsAttack).
    * @param {Event} event The triggering click event.
    * @private
    */
   async _onItemAttackRoll(event) {
     event.preventDefault();
+
     // --- Check if Crushed or Pinned ---
     if (this.actor.flags?.surge?.crushed === true) {
       ui.notifications.warn(`${this.actor.name} cannot attack while Crushed.`);
@@ -2394,6 +2396,14 @@ export class SurgeCharacterSheet extends ActorSheet {
     const item = this.actor.items.get(itemId); // Weapon item
 
     if (!item || item.type !== 'weapon') return;
+
+    // --- Action Point Check ---
+    const actionCost =
+      typeof item.system.actionsAttack === 'number'
+        ? item.system.actionsAttack
+        : 1;
+    const spent = await this._attemptSpendAction(actionCost);
+    if (!spent) return;
 
     const skillKey = item.system.skillUsed || 'martial';
     const skill = this.actor.system.skills[skillKey];
