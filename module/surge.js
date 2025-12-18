@@ -3513,6 +3513,11 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // --- Stand Up ---
     if (actionId === 'stand-up') {
+      // 1. Check Cost
+      const spent = await this._attemptSpendAction(1);
+      if (!spent) return; // Stop if they can't afford it
+
+      // 2. Perform Action
       const proneEffect = actor.effects.find(
         (e) =>
           e.changes.some((c) => c.key === 'flags.surge.prone') && !e.disabled
@@ -3530,6 +3535,11 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // --- Patch Up (Bleeding) ---
     else if (actionId === 'patch-up-bleeding') {
+      // 1. Check Cost
+      const spent = await this._attemptSpendAction(1);
+      if (!spent) return; // Stop if they can't afford it
+
+      // 2. Perform Action
       const effect = actor.effects.find(
         (e) =>
           e.changes.some((c) => c.key === 'flags.surge.bleeding') && !e.disabled
@@ -3547,6 +3557,11 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // --- Patch Up (Broken) ---
     else if (actionId === 'patch-up-broken') {
+      // 1. Check Cost
+      const spent = await this._attemptSpendAction(1);
+      if (!spent) return; // Stop if they can't afford it
+
+      // 2. Perform Action
       const effect = actor.effects.find(
         (e) =>
           e.changes.some((c) => c.key === 'flags.surge.broken') && !e.disabled
@@ -3727,33 +3742,43 @@ export class SurgeCharacterSheet extends ActorSheet {
    */
   async _onUseAction(event) {
     event.preventDefault();
+    const spent = await this._attemptSpendAction(1);
 
-    // 1. Check if we are in Combat
-    if (!game.combat?.started) {
-      return ui.notifications.info(
-        'You are not in an active combat encounter. Actions are free.'
-      );
+    if (spent) {
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+        content: `${this.actor.name} used a Generic Action.`,
+      });
     }
+  }
+
+  /**
+   * Helper to safely spend actions.
+   * Returns TRUE if the action was spent (or if not in combat)
+   * Returns FALSE if the actor couldn't afford it.
+   * @param {number} cost - The number of actions to spend
+   */
+  async _attemptSpendAction(cost = 1) {
+    // 1. If not in combat, actions are free.
+    if (!game.combat?.started) return true;
 
     const actor = this.actor;
     const currentActions = actor.system.passives.actions.value;
-    const cost = 1;
 
-    // 2. Check if we have enough actions
+    // 2. Check affordability
     if (currentActions < cost) {
-      return ui.notifications.warn(
-        `${actor.name} does not have enough Action Points remaining!`
+      ui.notifications.warn(
+        `${actor.name} does not have enough Action Points! (Need ${cost}, Have ${currentActions})`
       );
+      return false;
     }
 
-    // 3. Update the value
+    // 3. Spend the points
     await actor.update({
       'system.passives.actions.value': currentActions - cost,
     });
+    return true;
   }
-
-  // Define other event handler methods like _onItemAttack, etc.
-  // Remember to use async for functions that perform rolls or update the actor.
 } // End of SurgeCharacterSheet class
 
 /**
