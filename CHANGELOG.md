@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.12.0] - 2025-12-17
+
+### 🚀 New Feature: NPC Sheets
+
+- **New Actor Type:** Implemented the `npc` Actor type.
+- **Dedicated Sheet:** Created a simplified yet consistent sheet layout for NPCs.
+  - **Tabbed Layout:** Matches the Character sheet (Main, Inventory, Spellbook, Effects, Notes) for a consistent user experience.
+  - **Streamlined Main Tab:** displays Attributes and Skills immediately without the "Buy Points" or "Leveling" overhead.
+  - **Simplified Header:** Replaces Species/Level data with a simple "Role/Type" field.
+- **Shared Systems:** NPCs fully utilize existing systems including:
+  - Inventory & Gear management.
+  - Condition Actions (Stand Up, Patch Up).
+  - Automated Stat calculations (Menace, Actions, etc.).
+  - Active Effects tracking.
+
+### 🛠️ Technical Improvements
+
+- **Data Model:** Updated `template.json` to share base schema (Attributes, Skills, Resources) between Characters and NPCs to reduce code duplication.
+- **Sheet Logic:** Refactored `getData` in `surge.js` to strictly separate Character-specific logic (Species, BP, Death Saves) from Common logic (Skills, Inventory, Actions).
+
 ## [0.11.2] - 2025-12-15
 
 ### ✨ New Features: Condition Actions

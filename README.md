@@ -12,22 +12,26 @@ This system is currently **under active development** (pre-release) but now incl
 
 ## Installation
 
-**Important:** This system is currently in a pre-release state (v0.11.2). Features may be incomplete or change. Use with caution!
+**Important:** This system is currently in a pre-release state (v0.12.0). Features may be incomplete or change. Use with caution!
 
 1.  Open the Foundry VTT Setup screen.
 2.  Navigate to the "Game Systems" tab.
 3.  Click the "Install System" button.
-4.  In the "Manifest URL" field... paste the following URL for the **v0.11.2** release:
+4.  In the "Manifest URL" field... paste the following URL for the **v0.12.0** release:
     ```
-    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.11.2/system.json
+    https://raw.githubusercontent.com/PupRiku/FoundryVTT-Surge/v0.12.0/system.json
     ```
 5.  Click "Install".
 
 Foundry will download and install the system. You can then create a new world using the SURGE! system.
 
-## Current Features (as of v0.11.1)
+## Current Features (as of v0.12.0)
 
 - **Basic System Structure:** `system.json` manifest, `template.json` data models (Character, various Item types). Basic CSS styling. Includes Macro Compendium pack.
+- **NPC Support (New in v0.12.0):**
+  - Dedicated NPC Actor type with a streamlined sheet.
+  - Full access to Items, Spells, and Effects without the complexity of Player Character progression.
+  - "Role" field for designating enemy types (e.g., Minion, Boss, Guard).
 - **Character Sheet:**
   - Functional sheet window with Header (Name, Image, Level, Passives Grid) and Tabs (Main, Inventory, Spellbook, Biography, Effects).
   - **Header:** Displays core info; Total Menace updates automatically. **Now includes a dynamic Species/Trait display and HP-based status label (e.g., Healthy, Bloodied, Dying).**
@@ -35,14 +39,14 @@ Foundry will download and install the system. You can then create a new world us
   - **Inventory Tab:** Categorized item display (Weapons, Armor/Shields, Gear) with functional Edit, Delete, Equip/Unequip controls. Attack/Damage roll buttons on weapons.
   - **Biography Tab:** Rich text editors for all biography fields.
   - **Effects Tab:** Displays active effects applied to the actor with working Toggle (Enable/Disable), Edit, and Delete controls (using custom handlers).
-  - **New in v0.11.2:** "Edit Mode" allows for manual stat overrides, resetting stats/BP, and removing Species.
-  - **New in v0.11.2:** Smart "Condition Actions" in the Effects tab (Stand Up, Patch Up) that appear based on active status effects.
+  - **Edit Mode:** "Edit Mode" allows for manual stat overrides, resetting stats/BP, and removing Species.
+  - **Condition Actions:** Smart "Condition Actions" in the Effects tab (Stand Up, Patch Up) that appear based on active status effects.
 - **Item Sheet:**
   - Basic functional sheet for viewing/editing items.
   - Common fields (Name, Image, Description, Qty, Wt, Price).
   - Type-specific fields for Weapons, Armor, & Shields.
   - Fields & layout for "spell", **"species"**, and **"trait"** item types.
-- **Character Creation (v0.10.2):**
+- **Character Creation:**
   - Automated character setup via **drag-and-drop of a `Species` item** from the compendium onto the actor sheet.
   - When a species is applied, the system automatically:
     - Applies attribute bonuses.
@@ -52,8 +56,7 @@ Foundry will download and install the system. You can then create a new world us
   - Implemented `Trait` items that grant skill bonuses, which are automatically calculated and applied to skill totals and rolls.
   - Blank character sheets now display "?" for key stats, which populate after a species is added.
   - Created Compendium packs for Species and Traits with initial Ponturi data.
-  - **(v0.10.1)** Added special functionality for the Djinn species to allow for their daily 'Chosen Trait' to be changed via a button on the actor sheet.
-- **Character Advancement (v0.11.0 / v0.11.1):**
+- **Character Advancement:**
   - Implemented the Buy Point Level System (Updated to simplified rules in v0.11.1).
   - Characters gain **7 Buy Points (BP)** upon leveling up (plus Intelligence bonus).
   - Players can spend BP via buttons on the actor sheet to increase Attribute and Skill levels.
@@ -93,11 +96,10 @@ Foundry will download and install the system. You can then create a new world us
 
 ## Planned Features / To-Do
 
-- **Refine Condition Mechanics:** Implement specific Condition Actions (Break Free, Patch Up, Shake Off Stun, Stand Up).
+- **Refine Condition Mechanics:** Implement specific Condition Actions (Break Free, Shake Off Stun).
 - **Refine Spellcasting System:** Implement Focus mechanic (concentration checks); Handle multi-turn casting times & action costs; Implement Area of Effect targeting/templates; Refine spell damage/healing application; Implement Mending school healing interaction with Unconscious.
 - **Item Sheet Enhancements:** UI for editing array data (DR, Penalties); Layouts for remaining item types (Gear, Tool, Medicine, Antidotes, Brace, etc.).
 - **Combat Options:** Unarmed Strike, Grapple, Shove, Shield HP/Blocking, Dodge/Counter, Kevlar mechanics.
-- **NPC Sheet:** Design data model and sheet.
 - **Compendia:** Packs for base items (weapons, armor, gear, remedies), spells, and example actors/NPCs. _(Species/Traits are now done)_.
 - **Styling & Polish:** Continue refining CSS and usability.
 - **Code Refinement:** Remove debug logging; Centralize damage/healing application.
