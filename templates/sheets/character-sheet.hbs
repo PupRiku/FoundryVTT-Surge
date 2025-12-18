@@ -96,9 +96,20 @@
       </div>
 
       {{! Row 2 }}
-      <div class='passive-grid-item actions'>
-        <label title='{{calculatedActions.label}}'>Actions</label>
-        <span class='passive-value'>{{calculatedActions.max}}</span>
+      <div class="passive-grid-item actions">
+        <label title="{{calculatedActions.label}}">Actions</label>
+        
+        {{!-- Flex container for value and button --}}
+        <div class="action-tracker flexcol" style="align-items: center;">
+            <div class="action-values" style="font-size: 1.2em; font-weight: bold;">
+                {{systemData.passives.actions.value}} / {{calculatedActions.max}}
+            </div>
+            
+            {{!-- Tiny button to spend 1 Action --}}
+            <button type="button" class="use-action-btn" title="Spend 1 Generic Action" style="font-size: 0.7em; line-height: 1; padding: 2px 5px; height: auto;">
+                Use 1
+            </button>
+        </div>
       </div>
       <div class='passive-grid-item encounter'>
         <label

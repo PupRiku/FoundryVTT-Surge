@@ -1280,8 +1280,11 @@ export class SurgeCharacterSheet extends ActorSheet {
 
     // Calculate Max Actions
     const dexLevel = context.systemData.attributes?.dex?.value ?? 1;
+
+    context.systemData.passives.actions.max = Math.floor(dexLevel / 2) + 2;
     context.calculatedActions = {
-      max: Math.floor(dexLevel / 2) + 2,
+      max: context.systemData.passives.actions.max,
+      value: context.systemData.passives.actions.value,
       label: 'Actions per Turn',
     };
 
@@ -1577,7 +1580,7 @@ export class SurgeCharacterSheet extends ActorSheet {
     // Reset Stats
     html.find('.reset-stats-button').click(this._onResetStats.bind(this));
 
-    // Change Species Trait (Renamed from Djinn)
+    // Change Species Trait
     html
       .find('.change-species-trait')
       .click(this._onChangeSpeciesTrait.bind(this));
@@ -1587,8 +1590,11 @@ export class SurgeCharacterSheet extends ActorSheet {
       .find('.change-species-trait')
       .click(this._onChangeSpeciesTrait.bind(this));
 
-    // Remove Species (New)
+    // Remove Species
     html.find('.delete-species').click(this._onDeleteSpecies.bind(this));
+
+    // Use Generic Action
+    html.find('.use-action-btn').click(this._onUseAction.bind(this));
 
     // console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
@@ -3715,6 +3721,37 @@ export class SurgeCharacterSheet extends ActorSheet {
     }
   }
 
+  /**
+   * Handle spending Action Points.
+   * @param {Event} event
+   */
+  async _onUseAction(event) {
+    event.preventDefault();
+
+    // 1. Check if we are in Combat
+    if (!game.combat?.started) {
+      return ui.notifications.info(
+        'You are not in an active combat encounter. Actions are free.'
+      );
+    }
+
+    const actor = this.actor;
+    const currentActions = actor.system.passives.actions.value;
+    const cost = 1;
+
+    // 2. Check if we have enough actions
+    if (currentActions < cost) {
+      return ui.notifications.warn(
+        `${actor.name} does not have enough Action Points remaining!`
+      );
+    }
+
+    // 3. Update the value
+    await actor.update({
+      'system.passives.actions.value': currentActions - cost,
+    });
+  }
+
   // Define other event handler methods like _onItemAttack, etc.
   // Remember to use async for functions that perform rolls or update the actor.
 } // End of SurgeCharacterSheet class
@@ -4766,6 +4803,30 @@ Hooks.once('ready', () => {
   // console.log('SURGE! | Registered actor update handler for Stunned removal.');
 });
 
+/**
+ * Hook to handle Turn Start events.
+ * Resets Action Points to Max when a combatant's turn begins.
+ */
+Hooks.on('updateCombat', async (combat, updateData, options, userId) => {
+  // Only run if we are the GM (to prevent 5 players all trying to update the same actor)
+  if (!game.user.isGM) return;
+
+  // Check if the turn changed
+  if (!updateData.round && !updateData.turn) return;
+
+  const combatant = combat.combatant;
+  if (!combatant || !combatant.actor) return;
+
+  const actor = combatant.actor;
+
+  // Calculate Max AP (Logic duplicated from Sheet for safety, or retrieved if saved)
+  const dex = actor.system.attributes.dex.value;
+  const maxAP = Math.floor(dex / 2) + 2;
+
+  // Reset Current Actions to Max
+  await actor.update({ 'system.passives.actions.value': maxAP });
+});
+
 // --- System Initialization ---
 
 // Register the character sheet with Foundry
@@ -4774,15 +4835,5 @@ Actors.registerSheet('surge', SurgeCharacterSheet, {
   makeDefault: true,
   label: 'SURGE! Sheet',
 });
-
-// Example function for preloading templates (call in init hook)
-// async function preloadHandlebarsTemplates() {
-//     const templatePaths = [
-//         "systems/surge/templates/sheets/actor-sheet.hbs",
-//         "systems/surge/templates/sheets/partials/attributes.hbs" // Example partial
-// Add paths to all your .hbs files here
-//     ];
-//     return loadTemplates(templatePaths);
-// }
 
 console.log('SURGE! | surge.js Parsed');
