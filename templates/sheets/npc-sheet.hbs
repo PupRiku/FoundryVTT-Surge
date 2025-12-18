@@ -1,197 +1,247 @@
-<form class='{{cssClass}} flexcol' autocomplete='off'>
+<form class="{{cssClass}}" autocomplete="off">
 
-  {{! NPC Header }}
-  <header class='sheet-header'>
-    <div class='header-top-row flexrow'>
-      <img
-        class='profile-img'
-        src='{{actor.img}}'
-        data-edit='img'
-        title='{{actor.name}}'
-        height='100'
-        width='100'
-      />
-      <div class='charname-block'>
-        <h1 class='charname'>
-          <input
-            name='name'
-            type='text'
-            value='{{actor.name}}'
-            placeholder='NPC Name'
-          />
+  {{! Sheet Header }}
+  <header class="sheet-header">
+    <div class="header-top-row">
+      
+      {{! Profile Image }}
+      <img class="profile-img" src="{{actor.img}}" data-edit="img" title="{{actor.name}}" height="100" width="100"/>
+
+      {{! Name & Role Block }}
+      <div class="charname-block">
+        <h1 class="charname">
+            <input name="name" type="text" value="{{actor.name}}" placeholder="NPC Name"/>
         </h1>
-        <div class='npc-role-input'>
-          <input
-            type='text'
-            name='system.details.role.value'
-            value='{{systemData.details.role.value}}'
-            placeholder='Role / Type (e.g. Guard)'
-            style='font-style: italic;'
-          />
+        <div class="flexrow" style="align-items: center; margin-top: 5px;">
+            {{!-- Role / Type Input --}}
+            <input type="text" name="system.details.role.value" value="{{systemData.details.role.value}}" placeholder="Role / Type (e.g. Guard)" style="font-weight: bold; font-style: italic;"/>
         </div>
       </div>
     </div>
 
-    {{! Resources Row }}
-    <div class='npc-resources-row flexrow'>
-      <div class='resource-group'>
-        <label>HP</label>
-        <div class='resource-inputs flexrow'>
-          <input
-            type='text'
-            name='system.passives.hp.value'
-            value='{{displayHP}}'
-            data-dtype='Number'
-          />
+    {{! ***** STATUS ROW ***** }}
+    <div class="header-status-row flexrow" style="align-items: center; justify-content: space-around; margin-bottom: 10px; padding: 5px; background: rgba(0,0,0,0.05);">
+        <div class="hp-status-label">
+            <strong>Status:</strong> {{hpStatusLabel}}
+        </div>
+        {{!-- Optional: Add Threat Level or XP Value here if desired later --}}
+    </div>
+
+    {{! Passives Grid (Identical to Character Sheet) }}
+    <div class="header-passives-grid">
+      <div class="passive-grid-item hp">
+        <label title="Hit Points">HP</label>
+        <div class="resource-value flexrow">
+          <input type="text" name="system.passives.hp.value" value="{{displayHP}}" data-dtype="Number"/>
           <span> / </span>
-          <input
-            type='text'
-            name='system.passives.hp.max'
-            value='{{displayMaxHP}}'
-            data-dtype='Number'
-          />
+          <input type="text" name="system.passives.hp.max" value="{{displayMaxHP}}" data-dtype="Number"/>
         </div>
       </div>
-      <div class='resource-group'>
-        <label>Move</label>
-        <input
-          type='number'
-          name='system.passives.movement.value'
-          value='{{displayMovement}}'
-        />
+      <div class="passive-grid-item recovery">
+        <label title="Recovery">Recovery</label>
+        <input class="passive-value" type="number" name="system.passives.recovery.value" value="{{displayRecovery}}"/>
       </div>
-      <div class='resource-group'>
-        <label>Menace</label>
-        <input
-          type='number'
-          name='system.passives.menace.base'
-          value='{{systemData.passives.menace.base}}'
-        />
+      <div class="passive-grid-item movement">
+        <label title="Movement">Movement</label>
+        <input class="passive-value" type="number" name="system.passives.movement.value" value="{{displayMovement}}"/>
       </div>
-      <div class='resource-group'>
-        <label>Recovery</label>
-        <input
-          type='number'
-          name='system.passives.recovery.value'
-          value='{{displayRecovery}}'
-        />
+
+      <div class="passive-grid-item actions">
+        <label title="{{calculatedActions.label}}">Actions</label>
+        <span class="passive-value">{{calculatedActions.max}}</span>
+      </div>
+      <div class="passive-grid-item encounter">
+        <label title="En-Counter">En-Counter</label>
+        <input class="passive-value" type="number" name="system.passives.encounter.value" value="{{systemData.passives.encounter.value}}"/>
+      </div>
+      <div class="passive-grid-item menace">
+        <label title="Menace">Menace</label>
+        <input class="passive-value" type="number" name="system.passives.menace.base" value="{{systemData.passives.menace.base}}"/>
       </div>
     </div>
   </header>
 
-  {{! Main Content Area }}
-  {{! We remove the <hr> and ensure strict classes to avoid the 'gap' }}
-  <div class='sheet-body flexrow npc-body'>
+  {{! Sheet Body }}
+  <section class="sheet-body">
 
-    {{! LEFT COLUMN: Attributes }}
-    <aside class='sidebar-attributes'>
-      <h3 class='item-list-header'>Attributes</h3>
-      <div class='attributes-stack'>
-        {{#each systemData.attributes as |attr key|}}
-          <div class='attribute-box'>
-            <label
-              class='rollable'
-              data-attribute='{{key}}'
-            >{{attr.label}}</label>
-            <input
-              class='attribute-value'
-              type='number'
-              name='system.attributes.{{key}}.value'
-              value='{{attr.value}}'
-            />
-          </div>
-        {{/each}}
-      </div>
-    </aside>
+    {{! Tabs Navigation }}
+    <nav class="sheet-tabs tabs" data-group="primary">
+      <a class="item active" data-tab="main">Main</a>
+      <a class="item" data-tab="items">Inventory</a>
+      <a class="item" data-tab="spellbook">Spellbook</a>
+      <a class="item" data-tab="effects">Effects</a>
+      <a class="item" data-tab="description">Notes</a>
+    </nav>
 
-    {{! RIGHT COLUMN: Skills, Actions, Gear }}
-    <section class='main-content'>
+    {{! --- Main Tab Content --- }}
+    <div class="tab main" data-group="primary" data-tab="main">
+      
+      <div class="main-tab-columns">
 
-      {{! Condition Actions (Top of Right Column) }}
-      {{#if conditionActions.length}}
-        <div class='condition-actions-container'>
-          <div class='condition-actions-list'>
-            {{#each conditionActions as |action|}}
-              <button
-                type='button'
-                class='condition-action-btn'
-                data-action='{{action.id}}'
-              >
-                <i class='{{action.icon}}'></i>
-                {{action.label}}
-                <span class='cost'>({{action.cost}})</span>
-              </button>
+        {{! === Attributes Column (Left) === }}
+        <div class="attributes-column">
+          <h2>Attributes</h2>
+          <div class="attributes-block-list">
+            {{#each systemData.attributes as |attribute key|}}
+              <div class="attribute-block" data-attribute="{{key}}">
+                <label class="attribute-block-label rollable" data-attribute="{{key}}">{{attribute.label}}</label>
+                {{!-- NPCs are always editable --}}
+                <input class="attribute-block-value" type="number" name="system.attributes.{{key}}.value" value="{{attribute.value}}" data-dtype="Number"/>
+              </div>
             {{/each}}
           </div>
         </div>
-      {{/if}}
 
-      {{! Active Effects List (Moved Up so you can see them!) }}
-      {{#if effects.length}}
-        <div class='effects-container'>
-          <h3 class='item-list-header'>Active Conditions</h3>
-          <ol class='effects-list item-list'>
-            {{#each effects as |effect|}}
-              <li class='effect item flexrow' data-effect-id='{{effect.id}}'>
-                <img class='effect-icon item-image' src='{{effect.img}}' />
-                <div class='effect-data item-name'>
-                  <h4 class='effect-name'>{{effect.name}}</h4>
-                </div>
-                <div class='effect-controls item-controls'>
-                  <a
-                    class='effect-control item-delete'
-                    data-action='delete'
-                    title='Remove'
-                  ><i class='fas fa-trash'></i></a>
+        {{! === Skills Column (Right) === }}
+        <div class="skills-column">
+          <h2>Skills</h2>
+          <div class="skills-list flexcol">
+            {{#each systemData.skills as |skill key|}}
+              <div class="skill-item flexrow">
+                <label class="skill-label rollable" data-skill="{{key}}">{{skill.label}}</label>
+                {{!-- NPCs are always editable --}}
+                <input class="skill-value" type="number" name="system.skills.{{key}}.value" value="{{skill.value}}" data-dtype="Number" style="width: 40px; text-align: center;"/>
+              </div>
+            {{/each}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {{! --- Inventory Tab Content --- }}
+    <div class="tab items" data-group="primary" data-tab="items">
+      {{!-- Reusing the exact same structure as Character Sheet --}}
+      
+      {{!-- Weapons --}}
+      <div class="inventory-section weapons-list">
+        <h3 class="item-list-header">Weapons</h3>
+        <ol class="item-list">
+          {{#each actor.items as |item id|}}
+            {{#if (eq item.type 'weapon')}}
+              <li class="item flexrow" data-item-id="{{item.id}}">
+                <img class="item-image" src="{{item.img}}" width="24" height="24"/>
+                <h4 class="item-name">{{item.name}}</h4>
+                <div class="item-controls">
+                  <a class="item-control item-toggle-equip {{#if system.equipped}}active{{/if}}" title="Equip/Unequip"><i class="fas fa-shield-alt"></i></a>
+                  <a class="item-control item-roll-attack" title="Roll Attack"><i class="fas fa-fist-raised"></i></a>
+                  <a class="item-control item-roll-damage" title="Roll Damage"><i class="fas fa-dice-d6"></i></a>
+                  <a class="item-control item-edit" title="Edit"><i class="fas fa-edit"></i></a>
+                  <a class="item-control item-delete" title="Delete"><i class="fas fa-trash"></i></a>
                 </div>
               </li>
-            {{/each}}
-          </ol>
-        </div>
-      {{/if}}
-
-      {{! Skills Grid }}
-      <h3 class='item-list-header'>Skills</h3>
-      <div class='skills-grid grid grid-3col'>
-        {{#each systemData.skills as |skill key|}}
-          <div class='skill-entry flexrow'>
-            <label class='rollable' data-skill='{{key}}'>{{skill.label}}</label>
-            <input
-              type='number'
-              name='system.skills.{{key}}.value'
-              value='{{skill.value}}'
-            />
-          </div>
-        {{/each}}
+            {{/if}}
+          {{/each}}
+        </ol>
       </div>
 
-      {{! Inventory & Attacks }}
-      <h3 class='item-list-header' style='margin-top: 10px;'>Gear & Attacks</h3>
-      <ol class='item-list'>
-        {{#each actor.items as |item id|}}
-          <li class='item flexrow' data-item-id='{{item.id}}'>
-            <img class='item-image' src='{{item.img}}' width='24' height='24' />
-            <h4 class='item-name'>{{item.name}}</h4>
-            <div class='item-controls'>
-              {{#if (eq item.type 'weapon')}}
-                <a class='item-control item-roll-attack' title='Attack'><i
-                    class='fas fa-crosshairs'
-                  ></i></a>
-                <a class='item-control item-roll-damage' title='Damage'><i
-                    class='fas fa-dice-d6'
-                  ></i></a>
-              {{/if}}
-              <a class='item-control item-edit' title='Edit'><i
-                  class='fas fa-edit'
-                ></i></a>
-              <a class='item-control item-delete' title='Delete'><i
-                  class='fas fa-trash'
-                ></i></a>
+      {{!-- Armor --}}
+      <div class="inventory-section armor-list">
+        <h3 class="item-list-header">Armor & Shields</h3>
+        <ol class="item-list">
+          {{#each actor.items as |item id|}}
+            {{#if (or (eq item.type 'armor') (eq item.type 'shield'))}}
+              <li class="item flexrow" data-item-id="{{item.id}}">
+                <img class="item-image" src="{{item.img}}" width="24" height="24"/>
+                <h4 class="item-name">{{item.name}}</h4>
+                <div class="item-controls">
+                  <a class="item-control item-toggle-equip {{#if system.equipped}}active{{/if}}" title="Equip/Unequip"><i class="fas fa-shield-alt"></i></a>
+                  <a class="item-control item-edit"><i class="fas fa-edit"></i></a>
+                  <a class="item-control item-delete"><i class="fas fa-trash"></i></a>
+                </div>
+              </li>
+            {{/if}}
+          {{/each}}
+        </ol>
+      </div>
+
+      {{!-- Other Gear --}}
+      <div class="inventory-section gear-list">
+        <h3 class="item-list-header">Gear & Equipment</h3>
+        <ol class="item-list">
+          {{#each actor.items as |item id|}}
+            {{#if (or (eq item.type 'gear') (eq item.type 'tool') (eq item.type 'medicine') (eq item.type 'ammunition') (eq item.type 'material') (eq item.type 'treasure') (eq item.type 'item'))}}
+              <li class="item flexrow" data-item-id="{{item.id}}">
+                <img class="item-image" src="{{item.img}}" width="24" height="24"/>
+                <h4 class="item-name">{{item.name}}</h4>
+                <div class="item-controls">
+                  <a class="item-control item-edit"><i class="fas fa-edit"></i></a>
+                  <a class="item-control item-delete"><i class="fas fa-trash"></i></a>
+                </div>
+              </li>
+            {{/if}}
+          {{/each}}
+        </ol>
+      </div>
+    </div>
+
+    {{! --- Spellbook Tab --- }}
+    <div class="tab spellbook" data-group="primary" data-tab="spellbook">
+       <h3 class="item-list-header">Spellbook</h3>
+       <ol class="item-list spell-list">
+         {{#each actor.items as |item id|}}
+           {{#if (eq item.type 'spell')}}
+             <li class="item flexrow" data-item-id="{{item.id}}">
+               <img class="item-image" src="{{item.img}}" width="24" height="24"/>
+               <h4 class="item-name">{{item.name}}</h4>
+               <span class="item-info">({{item.system.school.value}})</span>
+               <div class="item-controls">
+                 <a class="item-control item-cast" title="Cast Spell"><i class="fas fa-magic"></i></a>
+                 <a class="item-control item-edit"><i class="fas fa-edit"></i></a>
+                 <a class="item-control item-delete"><i class="fas fa-trash"></i></a>
+               </div>
+             </li>
+           {{/if}}
+         {{/each}}
+       </ol>
+    </div>
+
+    {{! --- Effects Tab --- }}
+    <div class="tab effects" data-group="primary" data-tab="effects">
+      {{!-- Condition Actions --}}
+      {{#if conditionActions.length}}
+      <div class="condition-actions-container">
+        <h3 class="item-list-header">Available Actions</h3>
+        <div class="condition-actions-list">
+          {{#each conditionActions as |action|}}
+          <button type="button" class="condition-action-btn" data-action="{{action.id}}">
+            <i class="{{action.icon}}"></i> {{action.label}} <span class="cost">({{action.cost}})</span>
+          </button>
+          {{/each}}
+        </div>
+      </div>
+      <hr>
+      {{/if}}
+
+      {{!-- Active Effects List --}}
+      <h3 class="effects-header">Active Effects</h3>
+      <ol class="effects-list item-list">
+        {{#each effects as |effect|}}
+          <li class="effect item flexrow" data-effect-id="{{effect.id}}">
+            <img class="effect-icon item-image" src="{{effect.img}}"/>
+            <div class="effect-data item-name">
+              <h4 class="effect-name">{{effect.name}}</h4>
+            </div>
+            <div class="effect-controls item-controls">
+              <a class="effect-control item-delete" data-action="delete" title="Delete Effect"><i class="fas fa-trash"></i></a>
             </div>
           </li>
         {{/each}}
       </ol>
+    </div>
 
-    </section>
-  </div>
+    {{! --- Biography Tab --- }}
+    <div class="tab description" data-group="primary" data-tab="description">
+      <h2>GM Notes & Description</h2>
+      <div class="biography-section">
+          {{editor
+            systemData.biography.notes
+            target="system.biography.notes"
+            button=true
+            owner=owner
+            editable=editable
+          }}
+      </div>
+    </div>
+
+  </section>
 </form>
