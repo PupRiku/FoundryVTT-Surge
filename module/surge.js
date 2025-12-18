@@ -1596,6 +1596,9 @@ export class SurgeCharacterSheet extends ActorSheet {
     // Use Generic Action
     html.find('.use-action-btn').click(this._onUseAction.bind(this));
 
+    // Item Use Button
+    html.find('.item-use').click(this._onItemUse.bind(this));
+
     // console.log('SURGE! | Attached CUSTOM effect control listeners.');
   }
 
@@ -2434,6 +2437,37 @@ export class SurgeCharacterSheet extends ActorSheet {
     let finalModifiers = [...basePenalties, ...attackBonus];
 
     await this._performRoll(skillLevelOrDefault, label, finalModifiers);
+  }
+
+  /**
+   * Handle clicking the "Use" button on a generic item (Medicine, Tool, etc.).
+   * Spends 1 Action and posts to chat.
+   * @param {Event} event The triggering click event.
+   * @private
+   */
+  async _onItemUse(event) {
+    event.preventDefault();
+    const element = event.currentTarget;
+    const itemId = element.closest('.item').dataset.itemId;
+    const item = this.actor.items.get(itemId);
+
+    if (!item) return;
+
+    // 1. Check Action Cost
+    // Assume 1 Action for using items like Bandages or Tools
+    const spent = await this._attemptSpendAction(1);
+    if (!spent) return;
+
+    // 2. Post Chat Message
+    ChatMessage.create({
+      speaker: ChatMessage.getSpeaker({ actor: this.actor }),
+      content: `
+            <div class="surge chat-card">
+                <h3>${this.actor.name} uses ${item.name}</h3>
+                <p>${item.system.description || 'The item is used.'}</p>
+            </div>
+        `,
+    });
   }
 
   /**
